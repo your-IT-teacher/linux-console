@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Курс консоли Linux</title>
+    <!-- Подключаем VK Bridge -->
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f2f3f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .app {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 32px 24px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+        }
+        .user-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f8f9fa;
+            padding: 10px 16px;
+            border-radius: 40px;
+            margin-bottom: 24px;
+            border: 1px solid #e9ebf0;
+            justify-content: flex-start;
+        }
+        .user-card img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #fff;
+        }
+        .user-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #1c1c1e;
+        }
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1c1c1e;
+            margin-bottom: 8px;
+        }
+        .description {
+            font-size: 16px;
+            color: #5e5e66;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        .steps-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 16px 0;
+        }
+        .step-button {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: #f8f9fa;
+            border: 1px solid #e9ebf0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+            text-align: left;
+            font-size: 15px;
+            font-weight: 500;
+            color: #1c1c1e;
+            text-decoration: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .step-button:hover {
+            background: #edf0f5;
+            border-color: #cbd2db;
+        }
+        .step-button:active {
+            transform: scale(0.98);
+            background: #e1e6ee;
+        }
+        .step-number {
+            display: inline-block;
+            min-width: 30px;
+            font-weight: 600;
+            color: #4a76a8;
+            margin-right: 12px;
+        }
+        .step-title {
+            flex: 1;
+            margin-right: 12px;
+        }
+        .step-arrow {
+            color: #8e8e93;
+            font-size: 18px;
+        }
+        .footer-note {
+            margin-top: 16px;
+            font-size: 13px;
+            color: #8e8e93;
+        }
+        @media (max-width: 420px) {
+            .app {
+                padding: 20px 16px;
+            }
+            h1 {
+                font-size: 20px;
+            }
+            .step-button {
+                padding: 12px 14px;
+                font-size: 14px;
+            }
+        }
+    </style>
+
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript">
+        (function(m, e, t, r, i, k, a) {
+            m[i] = m[i] || function() { (m[i].a = m[i].a || []).push(arguments); };
+            m[i].l = 1 * new Date();
+            for (var j = 0; j < document.scripts.length; j++) {
+                if (document.scripts[j].src === r) { return; }
+            }
+            k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a)
+        })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js?id=110303584', 'ym');
+
+        ym(110303584, 'init', {
+            ssr: true,
+            webvisor: true,
+            clickmap: true,
+            ecommerce: "dataLayer",
+            referrer: document.referrer,
+            url: location.href,
+            accurateTrackBounce: true,
+            trackLinks: true
+        });
+    </script>
+    <noscript>
+        <div><img src="https://mc.yandex.ru/watch/110303584" style="position:absolute; left:-9999px;" alt="" /></div>
+    </noscript>
+    <!-- /Yandex.Metrika counter -->
+</head>
+
+<body>
+    <div class="app" id="app">
+        <!-- Блок с пользователем (заполняется через JS) -->
+        <div id="userBlock" class="user-card" style="display: none;">
+            <img id="userAvatar" src="" alt="аватар" />
+            <span class="user-name" id="userName">Гость</span>
+        </div>
+
+        <h1>🐧 Первые 10 шагов по консоли Linux</h1>
+        <p class="description">Выберите урок, чтобы посмотреть видео-инструкцию:</p>
+
+        <div class="steps-list" id="stepsContainer">
+            <!-- Список будет сгенерирован JS -->
+        </div>
+
+        <div class="footer-note">Кликайте на шаг – видео откроется автоматически</div>
+    </div>
+
+    <script>
+        (function() {
+            // ---- Данные курса ----
+            const STEPS = [{
+                id: 1,
+                title: '🚀 Первый шаг',
+                url: 'https://vkvideo.ru/video-193665099_456239019?pl=-193665099_1'
+            }, {
+                id: 2,
+                title: '🚀 Второй шаг',
+                url: 'https://vkvideo.ru/video-193665099_456239020?pl=-193665099_1'
+            }, {
+                id: 3,
+                title: '🚀 Третий шаг',
+                url: 'https://vkvideo.ru/video-193665099_456239021?pl=-193665099_1'
+            }, {
+                id: 4,
+                title: '🚀 Четвёртый шаг',
+                url: 'https://vkvideo.ru/video-193665099_456239022?pl=-193665099_1'
+            }, {
+                id: 5,
+                title: '🚀 Пятый шаг',
+                url: 'https://vkvideo.ru/video-193665099_456239023?pl=-193665099_1'
+            }, {
+                id: 6,
+                title: '🚀 Шестой шаг',
+                url: 'https://vkvideo.ru/video-193665099_456239025?pl=-193665099_1'
+            }, {
+                id: 7,
+                title: '🚀 Седьмой шаг',
+                url: 'https://vkvideo.ru/video-193665099_456239026?pl=-193665099_1'
+            }, {
+                id: 8,
+                title: '🚀 Восьмой шаг',
+                url: 'https://vkvideo.ru/video-193665099_456239027?pl=-193665099_1'
+            }, {
+                id: 9,
+                title: '🚀 Девятый шаг',
+                url: 'https://vkvideo.ru/video-193665099_456239028?pl=-193665099_1'
+            }, {
+                id: 10,
+                title: '🚀 Финальный, 10-й шаг',
+                url: 'https://vkvideo.ru/video-193665099_456239029?pl=-193665099_1'
+            }];
+
+            // ---- DOM ----
+            const vkBridge = window.vkBridge;
+            const userBlock = document.getElementById('userBlock');
+            const userAvatar = document.getElementById('userAvatar');
+            const userName = document.getElementById('userName');
+            const stepsContainer = document.getElementById('stepsContainer');
+
+            // ---- Функция открытия видео ----
+            function openStep(url, stepId) {
+                // Отправляем событие в Метрику (номер шага)
+                if (typeof ym === 'function') {
+                    ym(110303584, 'reachGoal', 'step' + stepId);
+                }
+
+                // Пытаемся открыть через VK Bridge (если доступен)
+                if (vkBridge && typeof vkBridge.send === 'function') {
+                    vkBridge.send('VKWebAppOpenExternal', { url: url })
+                        .catch(function(err) {
+                            console.warn('Ошибка открытия через Bridge, используем fallback:', err);
+                            window.open(url, '_blank');
+                        });
+                } else {
+                    // fallback для обычного браузера
+                    window.open(url, '_blank');
+                }
+            }
+
+            // ---- Генерация списка шагов ----
+            function renderSteps() {
+                stepsContainer.innerHTML = '';
+                STEPS.forEach(function(step) {
+                    const btn = document.createElement('div');
+                    btn.className = 'step-button';
+                    btn.setAttribute('role', 'button');
+                    btn.setAttribute('tabindex', '0');
+
+                    // Содержимое кнопки
+                    const numberSpan = document.createElement('span');
+                    numberSpan.className = 'step-number';
+                    numberSpan.textContent = step.id + '.';
+
+                    const titleSpan = document.createElement('span');
+                    titleSpan.className = 'step-title';
+                    titleSpan.textContent = step.title;
+
+                    const arrowSpan = document.createElement('span');
+                    arrowSpan.className = 'step-arrow';
+                    arrowSpan.textContent = '›';
+
+                    btn.appendChild(numberSpan);
+                    btn.appendChild(titleSpan);
+                    btn.appendChild(arrowSpan);
+
+                    // Обработчик клика
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        openStep(step.url, step.id);
+                    });
+
+                    // Доступность – энтер
+                    btn.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            openStep(step.url, step.id);
+                        }
+                    });
+
+                    stepsContainer.appendChild(btn);
+                });
+            }
+
+            // ---- Получение данных пользователя через VK Bridge ----
+            async function fetchUserInfo() {
+                try {
+                    if (!vkBridge) {
+                        userBlock.style.display = 'flex';
+                        userName.textContent = 'Гость (без VK)';
+                        userAvatar.src =
+                            'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"%3E%3Ccircle cx="20" cy="20" r="20" fill="%23e1e4e8"/%3E%3Ctext x="20" y="26" font-size="16" text-anchor="middle" fill="%238e8e93"%3E?%3C/text%3E%3C/svg%3E';
+                        return;
+                    }
+
+                    const data = await vkBridge.send('VKWebAppGetUserInfo');
+                    console.log('User info:', data);
+
+                    if (data && data.first_name) {
+                        userBlock.style.display = 'flex';
+                        userName.textContent = data.first_name + (data.last_name ? ' ' + data.last_name : '');
+                        userAvatar.src = data.photo_200 ||
+                            'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"%3E%3Ccircle cx="20" cy="20" r="20" fill="%23e1e4e8"/%3E%3Ctext x="20" y="26" font-size="16" text-anchor="middle" fill="%238e8e93"%3E?%3C/text%3E%3C/svg%3E';
+                    } else {
+                        userBlock.style.display = 'flex';
+                        userName.textContent = 'Пользователь VK';
+                    }
+                } catch (error) {
+                    console.warn('Ошибка получения данных пользователя:', error);
+                    userBlock.style.display = 'flex';
+                    userName.textContent = 'Гость (ошибка VK)';
+                }
+            }
+
+            // ---- Инициализация VK Mini App ----
+            if (vkBridge && typeof vkBridge.send === 'function') {
+                vkBridge.send('VKWebAppInit')
+                    .then(function() { console.log('VK Mini App initialized'); })
+                    .catch(function(err) { console.warn('Init error:', err); });
+            }
+
+            // ---- Запуск ----
+            renderSteps();
+            fetchUserInfo();
+        })();
+    </script>
+</body>
+</html>
