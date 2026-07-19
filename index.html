@@ -214,7 +214,7 @@
             «Курсы IT для системных администраторов».
             <br>
             <a href="#" id="subscribeLink" class="subscribe-link">Подписаться</a>
-            <span style="display:inline-block; margin-left: 8px; font-size:13px; color:#555;">(это займёт секунду)</span>
+            <span style="display:inline-block; margin-left: 8px; font-size:13px; color:#555;">(откроется в приложении)</span>
         </div>
 
         <div class="steps-list" id="stepsContainer">
@@ -297,10 +297,14 @@
                         }).catch(function(err) {
                             console.warn('Ошибка показа видео через VKWebAppShowVideo:', err);
                             // fallback – пробуем открыть внешнюю ссылку
-                            vkBridge.send('VKWebAppOpenExternal', { url: url })
-                                .catch(function() {
-                                    window.open(url, '_blank');
-                                });
+                            if (vkBridge && typeof vkBridge.send === 'function') {
+                                vkBridge.send('VKWebAppOpenExternal', { url: url })
+                                    .catch(function() {
+                                        window.open(url, '_blank');
+                                    });
+                            } else {
+                                window.open(url, '_blank');
+                            }
                         });
                     } else {
                         // Если Bridge недоступен – просто открываем в новой вкладке
@@ -390,19 +394,26 @@
                 }
             }
 
-            // ---- Обработчик подписки на группу ----
+            // ---- Обработчик подписки на группу (используем VKWebAppOpenGroup) ----
             function handleSubscribe(e) {
                 e.preventDefault();
-                const groupUrl = 'https://vk.ru/yourITteacher'; // ссылка на группу
+                // Короткий адрес группы (без vk.com/)
+                const groupScreenName = 'yourITteacher';
 
                 if (vkBridge && typeof vkBridge.send === 'function') {
-                    vkBridge.send('VKWebAppOpenExternal', { url: groupUrl })
+                    // Пытаемся открыть группу через VKWebAppOpenGroup (поддерживается в мобильных клиентах)
+                    vkBridge.send('VKWebAppOpenGroup', { group_id: groupScreenName })
                         .catch(function(err) {
-                            console.warn('Ошибка открытия группы через Bridge:', err);
-                            window.open(groupUrl, '_blank');
+                            console.warn('Ошибка открытия группы через VKWebAppOpenGroup:', err);
+                            // Fallback: если метод не поддерживается, пробуем открыть через внешнюю ссылку
+                            vkBridge.send('VKWebAppOpenExternal', { url: 'https://vk.com/' + groupScreenName })
+                                .catch(function() {
+                                    window.open('https://vk.com/' + groupScreenName, '_blank');
+                                });
                         });
                 } else {
-                    window.open(groupUrl, '_blank');
+                    // Если Bridge отсутствует – открываем в новой вкладке
+                    window.open('https://vk.com/' + groupScreenName, '_blank');
                 }
             }
 
