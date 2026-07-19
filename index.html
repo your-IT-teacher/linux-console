@@ -270,7 +270,7 @@
         <div class="steps-list" id="stepsContainer"></div>
 
         <div class="footer-note">Кликайте на шаг – видео откроется автоматически</div>
-        <div class="version" id="debugToggle">Версия 1.1.2</div>
+        <div class="version" id="debugToggle">Версия 1.1.3</div>
 
         <div id="debugInfo"></div>
     </div>
@@ -389,47 +389,59 @@
                 }
             }
 
-            // ---- Универсальный метод открытия ссылок с подробным логированием ----
-            function openUrl(url, method = 'auto', retryCount = 0) {
-                debugLog(`[${method}] Открываем URL: ${url} (попытка ${retryCount+1})`, 'info');
-
-                if (isNative && vkBridge && typeof vkBridge.send === 'function') {
-                    // Сначала пробуем VKWebAppOpenExternal
-                    debugLog(`[${method}] Вызываем VKWebAppOpenExternal`, 'info');
-                    vkBridge.send('VKWebAppOpenExternal', { url: url })
-                        .then(() => {
-                            debugLog(`[${method}] VKWebAppOpenExternal успешно отработал`, 'success');
-                        })
-                        .catch((err) => {
-                            debugLog(`[${method}] Ошибка VKWebAppOpenExternal: ${err.error_type} - ${err.error_data?.error_reason || 'нет данных'}`, 'error');
-                            debugLog(`[${method}] Пробуем window.open`, 'warn');
-                            fallbackOpen(url, method);
-                        });
-                } else {
-                    debugLog(`[${method}] Bridge не доступен или не нативный, используем window.open`, 'warn');
-                    fallbackOpen(url, method);
-                }
-            }
-
+            // ---- Fallback через window.open или location.href ----
             function fallbackOpen(url, method) {
                 try {
                     debugLog(`[${method}] Вызываем window.open('${url}', '_blank')`, 'info');
                     const win = window.open(url, '_blank');
                     if (!win || win.closed || typeof win.closed === 'undefined') {
-                        debugLog(`[${method}] window.open вернул null или окно закрыто`, 'warn');
-                        debugLog(`[${method}] Пробуем location.href = '${url}'`, 'warn');
+                        debugLog(`[${method}] window.open вернул null или окно закрыто, используем location.href`, 'warn');
                         window.location.href = url;
                     } else {
                         debugLog(`[${method}] window.open успешно выполнен`, 'success');
                     }
                 } catch (e) {
-                    debugLog(`[${method}] Ошибка window.open: ${e.message}`, 'error');
-                    debugLog(`[${method}] Пробуем location.href = '${url}'`, 'warn');
+                    debugLog(`[${method}] Ошибка window.open: ${e.message}, используем location.href`, 'error');
                     window.location.href = url;
                 }
             }
 
-            // ---- Функция открытия видео с таймаутом и подробными логами ----
+            // ---- Универсальный метод открытия ссылок с таймаутом ----
+            function openUrl(url, method = 'auto') {
+                debugLog(`[${method}] Открываем URL: ${url} (попытка 1)`, 'info');
+
+                if (isNative && vkBridge && typeof vkBridge.send === 'function') {
+                    debugLog(`[${method}] Пробуем VKWebAppOpenExternal`, 'info');
+                    let resolved = false;
+                    const promise = vkBridge.send('VKWebAppOpenExternal', { url: url });
+                    const timeout = new Promise((resolve) => {
+                        setTimeout(() => {
+                            if (!resolved) resolve('timeout');
+                        }, 3000);
+                    });
+
+                    Promise.race([promise, timeout])
+                        .then((result) => {
+                            if (result === 'timeout') {
+                                debugLog(`[${method}] VKWebAppOpenExternal не ответил за 3 сек, fallback`, 'warn');
+                                fallbackOpen(url, method);
+                            } else {
+                                resolved = true;
+                                debugLog(`[${method}] VKWebAppOpenExternal успешно отработал`, 'success');
+                            }
+                        })
+                        .catch((err) => {
+                            resolved = true;
+                            debugLog(`[${method}] Ошибка VKWebAppOpenExternal: ${err.error_type} - ${err.error_data?.error_reason || 'нет данных'}`, 'error');
+                            fallbackOpen(url, method);
+                        });
+                } else {
+                    debugLog(`[${method}] Bridge не доступен или не нативный, используем fallback`, 'warn');
+                    fallbackOpen(url, method);
+                }
+            }
+
+            // ---- Функция открытия видео ----
             function openStep(url, stepId) {
                 if (typeof ym === 'function') {
                     ym(110303584, 'reachGoal', 'step' + stepId);
@@ -448,7 +460,7 @@
                 const videoId = parseInt(match[2], 10);
                 debugLog(`Парсинг: owner_id=${ownerId}, video_id=${videoId}`, 'success');
 
-                // Для веб-версий используем прямой fallback
+                // Для веб-версий сразу fallback
                 if (!isNative) {
                     const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
                     debugLog(`Открываем в вебе: ${videoUrl}`, 'info');
@@ -456,46 +468,36 @@
                     return;
                 }
 
-                // Нативная платформа: пробуем VKWebAppShowVideo
+                // Нативная платформа: сначала VKWebAppShowVideo с таймаутом
                 debugLog('Пробуем VKWebAppShowVideo', 'info');
-
-                let showVideoResolved = false;
+                let resolved = false;
                 const startTime = Date.now();
-
-                const showVideoPromise = vkBridge.send('VKWebAppShowVideo', {
+                const promise = vkBridge.send('VKWebAppShowVideo', {
                     owner_id: ownerId,
                     video_id: videoId
                 });
-
-                // Таймаут 3 секунды
-                const timeoutPromise = new Promise((resolve) => {
+                const timeout = new Promise((resolve) => {
                     setTimeout(() => {
-                        if (!showVideoResolved) {
-                            resolve('timeout');
-                        }
+                        if (!resolved) resolve('timeout');
                     }, 3000);
                 });
 
-                Promise.race([showVideoPromise, timeoutPromise])
+                Promise.race([promise, timeout])
                     .then((result) => {
                         if (result === 'timeout') {
                             const elapsed = Date.now() - startTime;
                             debugLog(`VKWebAppShowVideo не ответил за ${elapsed} мс, переходим к fallback`, 'warn');
-                            // Пробуем открыть через VKWebAppOpenExternal с ссылкой на видео
                             const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
-                            debugLog(`Пробуем открыть через openUrl с методом fallback-after-timeout`, 'info');
                             openUrl(videoUrl, 'fallback-after-timeout');
                         } else {
-                            showVideoResolved = true;
-                            debugLog('Видео успешно открыто через VKWebAppShowVideo', 'success');
+                            resolved = true;
+                            debugLog('Видео открыто через VKWebAppShowVideo', 'success');
                         }
                     })
                     .catch((err) => {
-                        showVideoResolved = true;
+                        resolved = true;
                         debugLog(`Ошибка VKWebAppShowVideo: ${err.error_type} - ${err.error_data?.error_reason || 'нет данных'}`, 'error');
-                        // Fallback – открываем через внешнюю ссылку
                         const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
-                        debugLog(`Пробуем открыть через openUrl с методом fallback-after-error`, 'info');
                         openUrl(videoUrl, 'fallback-after-error');
                     });
             }
@@ -568,40 +570,34 @@
                 }
             }
 
-            // ---- Подписка на группу с таймаутом и подробными логами ----
+            // ---- Подписка на группу с таймаутом ----
             function handleSubscribe(e) {
                 e.preventDefault();
                 const groupUrl = 'https://vk.com/yourITteacher';
                 debugLog('Подписка на группу', 'info');
 
                 if (isNative && vkBridge && typeof vkBridge.send === 'function') {
-                    // Пробуем VKWebAppOpenGroup
                     debugLog('Пробуем VKWebAppOpenGroup', 'info');
-                    let groupResolved = false;
-                    const startTime = Date.now();
-
-                    const groupPromise = vkBridge.send('VKWebAppOpenGroup', { group_id: 'yourITteacher' });
-                    const timeoutPromise = new Promise((resolve) => {
+                    let resolved = false;
+                    const promise = vkBridge.send('VKWebAppOpenGroup', { group_id: 'yourITteacher' });
+                    const timeout = new Promise((resolve) => {
                         setTimeout(() => {
-                            if (!groupResolved) {
-                                resolve('timeout');
-                            }
+                            if (!resolved) resolve('timeout');
                         }, 3000);
                     });
 
-                    Promise.race([groupPromise, timeoutPromise])
+                    Promise.race([promise, timeout])
                         .then((result) => {
                             if (result === 'timeout') {
-                                const elapsed = Date.now() - startTime;
-                                debugLog(`VKWebAppOpenGroup не ответил за ${elapsed} мс, переходим к fallback`, 'warn');
+                                debugLog('VKWebAppOpenGroup не ответил за 3 сек, fallback', 'warn');
                                 openUrl(groupUrl, 'subscribe-fallback');
                             } else {
-                                groupResolved = true;
+                                resolved = true;
                                 debugLog('Группа открыта через VKWebAppOpenGroup', 'success');
                             }
                         })
                         .catch((err) => {
-                            groupResolved = true;
+                            resolved = true;
                             debugLog(`Ошибка VKWebAppOpenGroup: ${err.error_type} - ${err.error_data?.error_reason || 'нет данных'}`, 'error');
                             openUrl(groupUrl, 'subscribe-fallback');
                         });
@@ -620,7 +616,7 @@
                     debugLog('Отладка включена через параметр debug=true');
                 }
 
-                debugLog('Приложение загружено, версия 1.1.2');
+                debugLog('Приложение загружено, версия 1.1.3');
 
                 if (vkBridge && typeof vkBridge.send === 'function') {
                     try {
