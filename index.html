@@ -66,6 +66,44 @@
             margin-bottom: 20px;
             line-height: 1.4;
         }
+
+        /* Предупреждение о подписке */
+        .subscribe-notice {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 14px;
+            color: #333;
+            line-height: 1.4;
+        }
+        .subscribe-notice strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+        .subscribe-link {
+            display: inline-block;
+            margin-top: 8px;
+            background: #2787f5;
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            transition: background 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .subscribe-link:hover {
+            background: #1a6bc4;
+        }
+        .subscribe-link:active {
+            transform: scale(0.96);
+        }
+
         .steps-list {
             display: flex;
             flex-direction: column;
@@ -170,6 +208,15 @@
         <h1>🐧 Первые 10 шагов по консоли Linux</h1>
         <p class="description">Выберите урок, чтобы посмотреть видео-инструкцию:</p>
 
+        <!-- ПРЕДУПРЕЖДЕНИЕ О ПОДПИСКЕ -->
+        <div class="subscribe-notice">
+            <strong>📢 Для просмотра видео необходимо быть подписанным на группу</strong>
+            «Курсы IT для системных администраторов».
+            <br>
+            <a href="#" id="subscribeLink" class="subscribe-link">Подписаться</a>
+            <span style="display:inline-block; margin-left: 8px; font-size:13px; color:#555;">(это займёт секунду)</span>
+        </div>
+
         <div class="steps-list" id="stepsContainer">
             <!-- Список будет сгенерирован JS -->
         </div>
@@ -228,24 +275,47 @@
             const userAvatar = document.getElementById('userAvatar');
             const userName = document.getElementById('userName');
             const stepsContainer = document.getElementById('stepsContainer');
+            const subscribeLink = document.getElementById('subscribeLink');
 
-            // ---- Функция открытия видео ----
+            // ---- Функция открытия видео через VKWebAppShowVideo ----
             function openStep(url, stepId) {
                 // Отправляем событие в Метрику (номер шага)
                 if (typeof ym === 'function') {
                     ym(110303584, 'reachGoal', 'step' + stepId);
                 }
 
-                // Пытаемся открыть через VK Bridge (если доступен)
-                if (vkBridge && typeof vkBridge.send === 'function') {
-                    vkBridge.send('VKWebAppOpenExternal', { url: url })
-                        .catch(function(err) {
-                            console.warn('Ошибка открытия через Bridge, используем fallback:', err);
-                            window.open(url, '_blank');
+                // Извлекаем owner_id и video_id из URL
+                const match = url.match(/video(-?\d+)_(\d+)/);
+                if (match) {
+                    const ownerId = parseInt(match[1], 10);
+                    const videoId = parseInt(match[2], 10);
+
+                    if (vkBridge && typeof vkBridge.send === 'function') {
+                        vkBridge.send('VKWebAppShowVideo', {
+                            owner_id: ownerId,
+                            video_id: videoId
+                        }).catch(function(err) {
+                            console.warn('Ошибка показа видео через VKWebAppShowVideo:', err);
+                            // fallback – пробуем открыть внешнюю ссылку
+                            vkBridge.send('VKWebAppOpenExternal', { url: url })
+                                .catch(function() {
+                                    window.open(url, '_blank');
+                                });
                         });
+                    } else {
+                        // Если Bridge недоступен – просто открываем в новой вкладке
+                        window.open(url, '_blank');
+                    }
                 } else {
-                    // fallback для обычного браузера
-                    window.open(url, '_blank');
+                    // Если не удалось распарсить – открываем как внешнюю ссылку
+                    if (vkBridge && typeof vkBridge.send === 'function') {
+                        vkBridge.send('VKWebAppOpenExternal', { url: url })
+                            .catch(function() {
+                                window.open(url, '_blank');
+                            });
+                    } else {
+                        window.open(url, '_blank');
+                    }
                 }
             }
 
@@ -258,7 +328,6 @@
                     btn.setAttribute('role', 'button');
                     btn.setAttribute('tabindex', '0');
 
-                    // Содержимое кнопки
                     const numberSpan = document.createElement('span');
                     numberSpan.className = 'step-number';
                     numberSpan.textContent = step.id + '.';
@@ -275,13 +344,11 @@
                     btn.appendChild(titleSpan);
                     btn.appendChild(arrowSpan);
 
-                    // Обработчик клика
                     btn.addEventListener('click', function(e) {
                         e.preventDefault();
                         openStep(step.url, step.id);
                     });
 
-                    // Доступность – энтер
                     btn.addEventListener('keydown', function(e) {
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
@@ -323,12 +390,31 @@
                 }
             }
 
+            // ---- Обработчик подписки на группу ----
+            function handleSubscribe(e) {
+                e.preventDefault();
+                const groupUrl = 'https://vk.ru/yourITteacher'; // ссылка на группу
+
+                if (vkBridge && typeof vkBridge.send === 'function') {
+                    vkBridge.send('VKWebAppOpenExternal', { url: groupUrl })
+                        .catch(function(err) {
+                            console.warn('Ошибка открытия группы через Bridge:', err);
+                            window.open(groupUrl, '_blank');
+                        });
+                } else {
+                    window.open(groupUrl, '_blank');
+                }
+            }
+
             // ---- Инициализация VK Mini App ----
             if (vkBridge && typeof vkBridge.send === 'function') {
                 vkBridge.send('VKWebAppInit')
                     .then(function() { console.log('VK Mini App initialized'); })
                     .catch(function(err) { console.warn('Init error:', err); });
             }
+
+            // ---- Подписка на события ----
+            subscribeLink.addEventListener('click', handleSubscribe);
 
             // ---- Запуск ----
             renderSteps();
