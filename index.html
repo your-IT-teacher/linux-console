@@ -270,7 +270,7 @@
         <div class="steps-list" id="stepsContainer"></div>
 
         <div class="footer-note">Кликайте на шаг – видео откроется автоматически</div>
-        <div class="version" id="debugToggle">Версия 1.0.8</div>
+        <div class="version" id="debugToggle">Версия 1.1.0</div>
 
         <div id="debugInfo"></div>
     </div>
@@ -365,14 +365,15 @@
                     const params = await vkBridge.send('VKWebAppGetLaunchParams');
                     platform = params.vk_platform || 'unknown';
                     debugLog(`Платформа: ${platform}`, 'info');
-                    if (platform === 'android' || platform === 'ios') {
+                    // Проверяем, содержит ли строка 'android' или 'ios' (учтены mobile_android, mobile_ios, android, ios)
+                    if (platform.includes('android') || platform.includes('ios')) {
                         isNative = true;
                         debugLog('Нативное приложение VK', 'success');
-                        platformNotice.style.display = 'none'; // скрываем предупреждение для нативных
+                        platformNotice.style.display = 'none';
                     } else {
                         isNative = false;
                         debugLog('Веб-версия VK (desktop_web или mobile_web)', 'warn');
-                        showWebNotice(); // показываем для desktop_web и mobile_web
+                        showWebNotice();
                     }
                 } catch (e) {
                     debugLog(`Ошибка получения платформы: ${e.message}`, 'error');
@@ -381,7 +382,6 @@
             }
 
             function showWebNotice() {
-                // Показываем только если платформа не нативная (т.е. desktop_web или mobile_web)
                 if (!isNative) {
                     platformNotice.style.display = 'block';
                 } else {
@@ -445,6 +445,7 @@
                             debugLog('Видео открыто через VKWebAppShowVideo', 'success');
                         }).catch((err) => {
                             debugLog(`Ошибка VKWebAppShowVideo: ${err.error_type}`, 'error');
+                            debugLog('Пробуем открыть через внешнюю ссылку', 'warn');
                             const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
                             openUrl(videoUrl, 'fallback');
                         });
@@ -537,17 +538,15 @@
 
             // ---- Инициализация ----
             async function init() {
-                // Проверяем URL на наличие ?debug=true
+                // Проверяем debug параметр
                 const urlParams = new URLSearchParams(window.location.search);
                 const debugParam = urlParams.get('debug');
                 if (debugParam === 'true') {
                     debugInfo.classList.add('show');
+                    debugLog('Отладка включена через параметр debug=true');
                 }
 
-                // По умолчанию скрываем, пока не кликнут, но если debug=true, то показываем
-                // Также по клику на версию переключаем
-
-                debugLog('Приложение загружено, версия 1.0.8');
+                debugLog('Приложение загружено, версия 1.1.0');
 
                 if (vkBridge && typeof vkBridge.send === 'function') {
                     try {
