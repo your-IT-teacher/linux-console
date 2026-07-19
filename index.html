@@ -270,7 +270,7 @@
         <div class="steps-list" id="stepsContainer"></div>
 
         <div class="footer-note">Кликайте на шаг – видео откроется автоматически</div>
-        <div class="version" id="debugToggle">Версия 1.1.0</div>
+        <div class="version" id="debugToggle">Версия 1.1.1</div>
 
         <div id="debugInfo"></div>
     </div>
@@ -341,7 +341,7 @@
                 console.log(`[DEBUG] ${message}`);
             }
 
-            // ---- Переключение отладки по клику ----
+            // ---- Переключение отладки ----
             debugToggle.addEventListener('click', function(e) {
                 e.preventDefault();
                 debugInfo.classList.toggle('show');
@@ -365,7 +365,6 @@
                     const params = await vkBridge.send('VKWebAppGetLaunchParams');
                     platform = params.vk_platform || 'unknown';
                     debugLog(`Платформа: ${platform}`, 'info');
-                    // Проверяем, содержит ли строка 'android' или 'ios' (учтены mobile_android, mobile_ios, android, ios)
                     if (platform.includes('android') || platform.includes('ios')) {
                         isNative = true;
                         debugLog('Нативное приложение VK', 'success');
@@ -378,6 +377,7 @@
                 } catch (e) {
                     debugLog(`Ошибка получения платформы: ${e.message}`, 'error');
                     showWebNotice();
+                    isNative = false;
                 }
             }
 
@@ -389,7 +389,7 @@
                 }
             }
 
-            // ---- Функция открытия ссылки ----
+            // ---- Универсальный метод открытия ссылок ----
             function openUrl(url, method = 'auto') {
                 debugLog(`Открываем URL: ${url} (метод: ${method})`, 'info');
 
@@ -422,7 +422,7 @@
                 }
             }
 
-            // ---- Функция открытия видео ----
+            // ---- Функция открытия видео с таймаутом для нативных платформ ----
             function openStep(url, stepId) {
                 if (typeof ym === 'function') {
                     ym(110303584, 'reachGoal', 'step' + stepId);
@@ -431,33 +431,61 @@
                 debugLog(`Попытка открыть шаг ${stepId}: ${url}`, 'info');
 
                 const match = url.match(/video(-?\d+)_(\d+)/);
-                if (match) {
-                    const ownerId = parseInt(match[1], 10);
-                    const videoId = parseInt(match[2], 10);
-                    debugLog(`Парсинг: owner_id=${ownerId}, video_id=${videoId}`, 'success');
-
-                    if (isNative && vkBridge && typeof vkBridge.send === 'function') {
-                        debugLog('Пробуем VKWebAppShowVideo', 'info');
-                        vkBridge.send('VKWebAppShowVideo', {
-                            owner_id: ownerId,
-                            video_id: videoId
-                        }).then(() => {
-                            debugLog('Видео открыто через VKWebAppShowVideo', 'success');
-                        }).catch((err) => {
-                            debugLog(`Ошибка VKWebAppShowVideo: ${err.error_type}`, 'error');
-                            debugLog('Пробуем открыть через внешнюю ссылку', 'warn');
-                            const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
-                            openUrl(videoUrl, 'fallback');
-                        });
-                    } else {
-                        const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
-                        debugLog(`Открываем в вебе: ${videoUrl}`, 'info');
-                        fallbackOpen(videoUrl);
-                    }
-                } else {
+                if (!match) {
                     debugLog('Не удалось распарсить ID, открываем как есть', 'warn');
                     openUrl(url, 'direct');
+                    return;
                 }
+
+                const ownerId = parseInt(match[1], 10);
+                const videoId = parseInt(match[2], 10);
+                debugLog(`Парсинг: owner_id=${ownerId}, video_id=${videoId}`, 'success');
+
+                // Для веб-версий используем прямой fallback (открываем страницу видео)
+                if (!isNative) {
+                    const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
+                    debugLog(`Открываем в вебе: ${videoUrl}`, 'info');
+                    fallbackOpen(videoUrl);
+                    return;
+                }
+
+                // Нативная платформа: сначала пробуем VKWebAppShowVideo
+                debugLog('Пробуем VKWebAppShowVideo', 'info');
+
+                let showVideoResolved = false;
+                const showVideoPromise = vkBridge.send('VKWebAppShowVideo', {
+                    owner_id: ownerId,
+                    video_id: videoId
+                });
+
+                // Устанавливаем таймаут 3 секунды – если не ответил, считаем, что не сработало
+                const timeoutPromise = new Promise((resolve) => {
+                    setTimeout(() => {
+                        if (!showVideoResolved) {
+                            resolve('timeout');
+                        }
+                    }, 3000);
+                });
+
+                Promise.race([showVideoPromise, timeoutPromise])
+                    .then((result) => {
+                        if (result === 'timeout') {
+                            debugLog('VKWebAppShowVideo не ответил за 3 секунды, переходим к fallback', 'warn');
+                            // Пробуем открыть через VKWebAppOpenExternal с ссылкой на видео
+                            const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
+                            openUrl(videoUrl, 'fallback-after-timeout');
+                        } else {
+                            showVideoResolved = true;
+                            debugLog('Видео открыто через VKWebAppShowVideo', 'success');
+                        }
+                    })
+                    .catch((err) => {
+                        showVideoResolved = true;
+                        debugLog(`Ошибка VKWebAppShowVideo: ${err.error_type}`, 'error');
+                        // Fallback – открываем через внешнюю ссылку
+                        const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
+                        openUrl(videoUrl, 'fallback-after-error');
+                    });
             }
 
             // ---- Генерация списка шагов ----
@@ -538,7 +566,6 @@
 
             // ---- Инициализация ----
             async function init() {
-                // Проверяем debug параметр
                 const urlParams = new URLSearchParams(window.location.search);
                 const debugParam = urlParams.get('debug');
                 if (debugParam === 'true') {
@@ -546,7 +573,7 @@
                     debugLog('Отладка включена через параметр debug=true');
                 }
 
-                debugLog('Приложение загружено, версия 1.1.0');
+                debugLog('Приложение загружено, версия 1.1.1');
 
                 if (vkBridge && typeof vkBridge.send === 'function') {
                     try {
