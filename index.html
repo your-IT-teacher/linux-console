@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Курс консоли Linux</title>
-    <!-- Подключаем VK Bridge -->
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
     <style>
         * {
@@ -66,8 +65,6 @@
             margin-bottom: 20px;
             line-height: 1.4;
         }
-
-        /* Предупреждение о подписке */
         .subscribe-notice {
             background: #fff3cd;
             border-left: 4px solid #ffc107;
@@ -103,7 +100,6 @@
         .subscribe-link:active {
             transform: scale(0.96);
         }
-
         .steps-list {
             display: flex;
             flex-direction: column;
@@ -124,7 +120,6 @@
             font-size: 15px;
             font-weight: 500;
             color: #1c1c1e;
-            text-decoration: none;
             -webkit-tap-highlight-color: transparent;
         }
         .step-button:hover {
@@ -160,6 +155,45 @@
             font-size: 12px;
             color: #b0b0b8;
             letter-spacing: 0.3px;
+        }
+        #debugInfo {
+            margin-top: 16px;
+            padding: 12px;
+            background: #f0f2f5;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 13px;
+            color: #1c1c1e;
+            border: 1px dashed #b0b0b8;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none; /* скрыто по умолчанию, покажем при клике на версию */
+        }
+        #debugInfo.show {
+            display: block;
+        }
+        .debug-toggle {
+            cursor: pointer;
+            text-decoration: underline dotted;
+            color: #2787f5;
+        }
+        .debug-entry {
+            margin: 4px 0;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .debug-entry.error {
+            color: #d32f2f;
+        }
+        .debug-entry.success {
+            color: #2e7d32;
+        }
+        .debug-entry.info {
+            color: #0d47a1;
+        }
+        .debug-entry.warn {
+            color: #f57f17;
         }
         @media (max-width: 420px) {
             .app {
@@ -205,7 +239,6 @@
 
 <body>
     <div class="app" id="app">
-        <!-- Блок с пользователем (заполняется через JS) -->
         <div id="userBlock" class="user-card" style="display: none;">
             <img id="userAvatar" src="" alt="аватар" />
             <span class="user-name" id="userName">Гость</span>
@@ -214,7 +247,6 @@
         <h1>🐧 Первые 10 шагов по консоли Linux</h1>
         <p class="description">Выберите урок, чтобы посмотреть видео-инструкцию:</p>
 
-        <!-- ПРЕДУПРЕЖДЕНИЕ О ПОДПИСКЕ -->
         <div class="subscribe-notice">
             <strong>📢 Для просмотра видео необходимо быть подписанным на группу</strong>
             «Курсы IT для системных администраторов».
@@ -223,12 +255,15 @@
             <span style="display:inline-block; margin-left: 8px; font-size:13px; color:#555;">(откроется в приложении)</span>
         </div>
 
-        <div class="steps-list" id="stepsContainer">
-            <!-- Список будет сгенерирован JS -->
-        </div>
+        <div class="steps-list" id="stepsContainer"></div>
 
         <div class="footer-note">Кликайте на шаг – видео откроется автоматически</div>
-        <div class="version">Версия 1.0.2</div>
+        <div class="version">
+            <span class="debug-toggle" id="debugToggle">Версия 1.0.4</span>
+        </div>
+
+        <!-- Блок отладки -->
+        <div id="debugInfo"></div>
     </div>
 
     <script>
@@ -283,50 +318,112 @@
             const userName = document.getElementById('userName');
             const stepsContainer = document.getElementById('stepsContainer');
             const subscribeLink = document.getElementById('subscribeLink');
+            const debugToggle = document.getElementById('debugToggle');
+            const debugInfo = document.getElementById('debugInfo');
 
-            // ---- Функция открытия видео через VKWebAppShowVideo ----
+            // ---- Логгер для отладки ----
+            function debugLog(message, type = 'info') {
+                const entry = document.createElement('div');
+                entry.className = `debug-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                debugInfo.appendChild(entry);
+                debugInfo.scrollTop = debugInfo.scrollHeight;
+                console.log(`[DEBUG] ${message}`);
+            }
+
+            // ---- Переключение видимости отладки ----
+            debugToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                debugInfo.classList.toggle('show');
+                if (debugInfo.classList.contains('show')) {
+                    debugLog('Отладка включена');
+                }
+            });
+
+            // ---- Получение информации о платформе ----
+            async function getPlatformInfo() {
+                if (!vkBridge || typeof vkBridge.send !== 'function') {
+                    debugLog('VK Bridge не доступен (возможно, запущено вне VK)', 'warn');
+                    return;
+                }
+                try {
+                    const [version, launchParams] = await Promise.all([
+                        vkBridge.send('VKWebAppGetClientVersion'),
+                        vkBridge.send('VKWebAppGetLaunchParams')
+                    ]);
+                    debugLog(`Клиент VK: ${version.version || 'неизвестно'} (платформа: ${version.platform || 'неизвестно'})`,
+                        'info');
+                    debugLog(`Параметры запуска: ${JSON.stringify(launchParams)}`, 'info');
+                } catch (e) {
+                    debugLog(`Ошибка получения информации о платформе: ${e.message}`, 'error');
+                }
+            }
+
+            // ---- Функция открытия видео ----
             function openStep(url, stepId) {
-                // Отправляем событие в Метрику (номер шага)
+                // Отправляем метрику
                 if (typeof ym === 'function') {
                     ym(110303584, 'reachGoal', 'step' + stepId);
                 }
 
-                // Извлекаем owner_id и video_id из URL
-                const match = url.match(/video(-?\d+)_(\d+)/);
-                if (match) {
-                    const ownerId = parseInt(match[1], 10);
-                    const videoId = parseInt(match[2], 10);
+                debugLog(`Попытка открыть шаг ${stepId}: ${url}`, 'info');
 
-                    if (vkBridge && typeof vkBridge.send === 'function') {
-                        vkBridge.send('VKWebAppShowVideo', {
-                            owner_id: ownerId,
-                            video_id: videoId
-                        }).catch(function(err) {
-                            console.warn('Ошибка показа видео через VKWebAppShowVideo:', err);
-                            // fallback – пробуем открыть внешнюю ссылку
-                            if (vkBridge && typeof vkBridge.send === 'function') {
-                                vkBridge.send('VKWebAppOpenExternal', { url: url })
-                                    .catch(function() {
-                                        window.open(url, '_blank');
-                                    });
-                            } else {
-                                window.open(url, '_blank');
-                            }
-                        });
-                    } else {
-                        // Если Bridge недоступен – просто открываем в новой вкладке
-                        window.open(url, '_blank');
-                    }
-                } else {
-                    // Если не удалось распарсить – открываем как внешнюю ссылку
-                    if (vkBridge && typeof vkBridge.send === 'function') {
+                // Извлекаем owner_id и video_id
+                const match = url.match(/video(-?\d+)_(\d+)/);
+                if (!match) {
+                    debugLog(`Не удалось распарсить ID видео из URL: ${url}`, 'error');
+                    // Пробуем открыть как внешнюю ссылку
+                    openExternal(url);
+                    return;
+                }
+
+                const ownerId = parseInt(match[1], 10);
+                const videoId = parseInt(match[2], 10);
+                debugLog(`Парсинг успешен: owner_id=${ownerId}, video_id=${videoId}`, 'success');
+
+                if (vkBridge && typeof vkBridge.send === 'function') {
+                    debugLog('Отправляем VKWebAppShowVideo...', 'info');
+                    vkBridge.send('VKWebAppShowVideo', {
+                        owner_id: ownerId,
+                        video_id: videoId
+                    }).then(() => {
+                        debugLog('Видео успешно открыто через VKWebAppShowVideo', 'success');
+                    }).catch((err) => {
+                        debugLog(`Ошибка VKWebAppShowVideo: ${err.error_type} - ${err.error_data?.error_reason || 'неизвестно'}`,
+                            'error');
+                        debugLog('Пробуем VKWebAppOpenExternal как fallback', 'warn');
+                        // Fallback: открыть внешнюю ссылку
                         vkBridge.send('VKWebAppOpenExternal', { url: url })
-                            .catch(function() {
+                            .then(() => {
+                                debugLog('Внешняя ссылка открыта через VKWebAppOpenExternal', 'success');
+                            })
+                            .catch((err2) => {
+                                debugLog(`Ошибка VKWebAppOpenExternal: ${err2.error_type}`, 'error');
+                                debugLog('Пробуем window.open', 'warn');
                                 window.open(url, '_blank');
                             });
-                    } else {
-                        window.open(url, '_blank');
-                    }
+                    });
+                } else {
+                    debugLog('Bridge недоступен, открываем через window.open', 'warn');
+                    window.open(url, '_blank');
+                }
+            }
+
+            // ---- Открытие внешней ссылки (для подписки) ----
+            function openExternal(url, method = 'auto') {
+                debugLog(`Открытие внешней ссылки: ${url} (метод: ${method})`, 'info');
+                if (vkBridge && typeof vkBridge.send === 'function') {
+                    vkBridge.send('VKWebAppOpenExternal', { url: url })
+                        .then(() => {
+                            debugLog('Ссылка открыта через VKWebAppOpenExternal', 'success');
+                        })
+                        .catch((err) => {
+                            debugLog(`Ошибка VKWebAppOpenExternal: ${err.error_type}`, 'error');
+                            debugLog('Пробуем window.open', 'warn');
+                            window.open(url, '_blank');
+                        });
+                } else {
+                    window.open(url, '_blank');
                 }
             }
 
@@ -371,64 +468,86 @@
                 });
             }
 
-            // ---- Получение данных пользователя через VK Bridge ----
+            // ---- Получение данных пользователя ----
             async function fetchUserInfo() {
                 try {
-                    if (!vkBridge) {
+                    if (!vkBridge || typeof vkBridge.send !== 'function') {
                         userBlock.style.display = 'flex';
                         userName.textContent = 'Гость (без VK)';
                         userAvatar.src =
                             'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"%3E%3Ccircle cx="20" cy="20" r="20" fill="%23e1e4e8"/%3E%3Ctext x="20" y="26" font-size="16" text-anchor="middle" fill="%238e8e93"%3E?%3C/text%3E%3C/svg%3E';
+                        debugLog('VK Bridge недоступен, пользователь гость', 'warn');
                         return;
                     }
 
                     const data = await vkBridge.send('VKWebAppGetUserInfo');
-                    console.log('User info:', data);
-
                     if (data && data.first_name) {
                         userBlock.style.display = 'flex';
                         userName.textContent = data.first_name + (data.last_name ? ' ' + data.last_name : '');
                         userAvatar.src = data.photo_200 ||
                             'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"%3E%3Ccircle cx="20" cy="20" r="20" fill="%23e1e4e8"/%3E%3Ctext x="20" y="26" font-size="16" text-anchor="middle" fill="%238e8e93"%3E?%3C/text%3E%3C/svg%3E';
+                        debugLog(`Пользователь: ${data.first_name} ${data.last_name || ''}`, 'success');
                     } else {
                         userBlock.style.display = 'flex';
                         userName.textContent = 'Пользователь VK';
+                        debugLog('Пользователь получен, но имя не задано', 'warn');
                     }
                 } catch (error) {
-                    console.warn('Ошибка получения данных пользователя:', error);
+                    debugLog(`Ошибка получения данных пользователя: ${error.message}`, 'error');
                     userBlock.style.display = 'flex';
                     userName.textContent = 'Гость (ошибка VK)';
                 }
             }
 
-            // ---- Обработчик подписки на группу (используем VKWebAppOpenGroup) ----
+            // ---- Обработчик подписки на группу (каскадный) ----
             function handleSubscribe(e) {
                 e.preventDefault();
-                // Короткий адрес группы (без vk.com/)
                 const groupScreenName = 'yourITteacher';
+                const groupUrl = 'https://vk.com/' + groupScreenName;
+
+                debugLog(`Попытка подписки на группу ${groupScreenName}`, 'info');
 
                 if (vkBridge && typeof vkBridge.send === 'function') {
-                    // Пытаемся открыть группу через VKWebAppOpenGroup (поддерживается в мобильных клиентах)
+                    // Сначала пробуем VKWebAppOpenGroup (нативный переход)
+                    debugLog('Пробуем VKWebAppOpenGroup...', 'info');
                     vkBridge.send('VKWebAppOpenGroup', { group_id: groupScreenName })
-                        .catch(function(err) {
-                            console.warn('Ошибка открытия группы через VKWebAppOpenGroup:', err);
-                            // Fallback: если метод не поддерживается, пробуем открыть через внешнюю ссылку
-                            vkBridge.send('VKWebAppOpenExternal', { url: 'https://vk.com/' + groupScreenName })
-                                .catch(function() {
-                                    window.open('https://vk.com/' + groupScreenName, '_blank');
+                        .then(() => {
+                            debugLog('Группа открыта через VKWebAppOpenGroup', 'success');
+                        })
+                        .catch((err) => {
+                            debugLog(`VKWebAppOpenGroup не удался: ${err.error_data?.error_reason || err.error_type}`,
+                                'error');
+                            debugLog('Пробуем VKWebAppOpenExternal', 'warn');
+                            // Fallback: открыть внешнюю ссылку
+                            vkBridge.send('VKWebAppOpenExternal', { url: groupUrl })
+                                .then(() => {
+                                    debugLog('Группа открыта через VKWebAppOpenExternal', 'success');
+                                })
+                                .catch((err2) => {
+                                    debugLog(`VKWebAppOpenExternal не удался: ${err2.error_type}`, 'error');
+                                    debugLog('Пробуем window.open', 'warn');
+                                    window.open(groupUrl, '_blank');
                                 });
                         });
                 } else {
-                    // Если Bridge отсутствует – открываем в новой вкладке
-                    window.open('https://vk.com/' + groupScreenName, '_blank');
+                    debugLog('Bridge недоступен, открываем через window.open', 'warn');
+                    window.open(groupUrl, '_blank');
                 }
             }
 
             // ---- Инициализация VK Mini App ----
             if (vkBridge && typeof vkBridge.send === 'function') {
                 vkBridge.send('VKWebAppInit')
-                    .then(function() { console.log('VK Mini App initialized'); })
-                    .catch(function(err) { console.warn('Init error:', err); });
+                    .then(() => {
+                        debugLog('VK Mini App инициализирован успешно', 'success');
+                        // После инициализации получаем информацию о платформе
+                        getPlatformInfo();
+                    })
+                    .catch((err) => {
+                        debugLog(`Ошибка инициализации: ${err.error_type}`, 'error');
+                    });
+            } else {
+                debugLog('VK Bridge не найден, приложение запущено вне VK', 'warn');
             }
 
             // ---- Подписка на события ----
@@ -437,6 +556,10 @@
             // ---- Запуск ----
             renderSteps();
             fetchUserInfo();
+
+            // Показываем отладку по умолчанию для удобства (можно убрать)
+            debugInfo.classList.add('show');
+            debugLog('Приложение загружено, версия 1.0.4');
         })();
     </script>
 </body>
