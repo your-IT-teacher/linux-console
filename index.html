@@ -270,7 +270,7 @@
         <div class="steps-list" id="stepsContainer"></div>
 
         <div class="footer-note">Кликайте на шаг – видео откроется автоматически</div>
-        <div class="version" id="debugToggle">Версия 1.0.7</div>
+        <div class="version" id="debugToggle">Версия 1.0.8</div>
 
         <div id="debugInfo"></div>
     </div>
@@ -341,6 +341,7 @@
                 console.log(`[DEBUG] ${message}`);
             }
 
+            // ---- Переключение отладки по клику ----
             debugToggle.addEventListener('click', function(e) {
                 e.preventDefault();
                 debugInfo.classList.toggle('show');
@@ -367,11 +368,11 @@
                     if (platform === 'android' || platform === 'ios') {
                         isNative = true;
                         debugLog('Нативное приложение VK', 'success');
-                        platformNotice.style.display = 'none';
+                        platformNotice.style.display = 'none'; // скрываем предупреждение для нативных
                     } else {
                         isNative = false;
                         debugLog('Веб-версия VK (desktop_web или mobile_web)', 'warn');
-                        showWebNotice();
+                        showWebNotice(); // показываем для desktop_web и mobile_web
                     }
                 } catch (e) {
                     debugLog(`Ошибка получения платформы: ${e.message}`, 'error');
@@ -380,14 +381,18 @@
             }
 
             function showWebNotice() {
-                platformNotice.style.display = 'block';
+                // Показываем только если платформа не нативная (т.е. desktop_web или mobile_web)
+                if (!isNative) {
+                    platformNotice.style.display = 'block';
+                } else {
+                    platformNotice.style.display = 'none';
+                }
             }
 
             // ---- Функция открытия ссылки ----
             function openUrl(url, method = 'auto') {
                 debugLog(`Открываем URL: ${url} (метод: ${method})`, 'info');
 
-                // Если мы в нативном приложении, используем VKWebAppOpenExternal
                 if (isNative && vkBridge && typeof vkBridge.send === 'function') {
                     vkBridge.send('VKWebAppOpenExternal', { url: url })
                         .then(() => {
@@ -398,7 +403,6 @@
                             fallbackOpen(url);
                         });
                 } else {
-                    // В вебе или при ошибке – пробуем через window.open
                     fallbackOpen(url);
                 }
             }
@@ -432,7 +436,6 @@
                     const videoId = parseInt(match[2], 10);
                     debugLog(`Парсинг: owner_id=${ownerId}, video_id=${videoId}`, 'success');
 
-                    // Если нативное приложение – используем VKWebAppShowVideo
                     if (isNative && vkBridge && typeof vkBridge.send === 'function') {
                         debugLog('Пробуем VKWebAppShowVideo', 'info');
                         vkBridge.send('VKWebAppShowVideo', {
@@ -442,12 +445,10 @@
                             debugLog('Видео открыто через VKWebAppShowVideo', 'success');
                         }).catch((err) => {
                             debugLog(`Ошибка VKWebAppShowVideo: ${err.error_type}`, 'error');
-                            // Fallback – открываем страницу видео
                             const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
                             openUrl(videoUrl, 'fallback');
                         });
                     } else {
-                        // Для веб-версии – открываем страницу видео через window.open
                         const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
                         debugLog(`Открываем в вебе: ${videoUrl}`, 'info');
                         fallbackOpen(videoUrl);
@@ -536,8 +537,17 @@
 
             // ---- Инициализация ----
             async function init() {
-                debugInfo.classList.add('show');
-                debugLog('Приложение загружено, версия 1.0.7');
+                // Проверяем URL на наличие ?debug=true
+                const urlParams = new URLSearchParams(window.location.search);
+                const debugParam = urlParams.get('debug');
+                if (debugParam === 'true') {
+                    debugInfo.classList.add('show');
+                }
+
+                // По умолчанию скрываем, пока не кликнут, но если debug=true, то показываем
+                // Также по клику на версию переключаем
+
+                debugLog('Приложение загружено, версия 1.0.8');
 
                 if (vkBridge && typeof vkBridge.send === 'function') {
                     try {
