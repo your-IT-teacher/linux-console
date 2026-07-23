@@ -203,6 +203,36 @@
             text-align: left;
             display: none;
         }
+        #videoContainer {
+            margin-top: 20px;
+            display: none;
+            position: relative;
+        }
+        #videoContainer iframe {
+            width: 100%;
+            height: 400px;
+            border-radius: 12px;
+            border: none;
+        }
+        .back-button {
+            display: inline-block;
+            margin-top: 12px;
+            background: #e9ebf0;
+            color: #1c1c1e;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .back-button:hover {
+            background: #d5d8e0;
+        }
+        .back-button:active {
+            transform: scale(0.96);
+        }
         @media (max-width: 420px) {
             .app {
                 padding: 20px 16px;
@@ -213,6 +243,9 @@
             .step-button {
                 padding: 12px 14px;
                 font-size: 14px;
+            }
+            #videoContainer iframe {
+                height: 280px;
             }
         }
     </style>
@@ -267,57 +300,72 @@
             <span style="display:inline-block; margin-left: 8px; font-size:13px; color:#555;">(откроется в приложении)</span>
         </div>
 
-        <div class="steps-list" id="stepsContainer"></div>
+        <div id="stepsContainer" class="steps-list"></div>
+
+        <div id="videoContainer">
+            <div id="videoWrapper"></div>
+            <button class="back-button" id="backButton">← Назад к урокам</button>
+        </div>
 
         <div class="footer-note">Кликайте на шаг – видео откроется автоматически</div>
-        <div class="version" id="debugToggle">Версия 1.1.4</div>
+        <div class="version" id="debugToggle">Версия 2.0.0</div>
 
         <div id="debugInfo"></div>
     </div>
 
     <script>
         (function() {
-            // ---- Данные курса ----
+            // ---- Данные курса с добавленными hash ----
             const STEPS = [{
                 id: 1,
                 title: '🚀 Первый шаг',
-                url: 'https://vkvideo.ru/video-193665099_456239019?pl=-193665099_1'
+                videoId: 456239019,
+                hash: '5077037f50a46f8b'
             }, {
                 id: 2,
                 title: '🚀 Второй шаг',
-                url: 'https://vkvideo.ru/video-193665099_456239020?pl=-193665099_1'
+                videoId: 456239020,
+                hash: '96187a5fac4956bc'
             }, {
                 id: 3,
                 title: '🚀 Третий шаг',
-                url: 'https://vkvideo.ru/video-193665099_456239021?pl=-193665099_1'
+                videoId: 456239021,
+                hash: 'fa7afa9f4740ee3e'
             }, {
                 id: 4,
                 title: '🚀 Четвёртый шаг',
-                url: 'https://vkvideo.ru/video-193665099_456239022?pl=-193665099_1'
+                videoId: 456239022,
+                hash: 'd83d06865d731f4b'
             }, {
                 id: 5,
                 title: '🚀 Пятый шаг',
-                url: 'https://vkvideo.ru/video-193665099_456239023?pl=-193665099_1'
+                videoId: 456239023,
+                hash: 'ee5dcb009617ae82'
             }, {
                 id: 6,
                 title: '🚀 Шестой шаг',
-                url: 'https://vkvideo.ru/video-193665099_456239025?pl=-193665099_1'
+                videoId: 456239025,
+                hash: '934f941e416dc5fa'
             }, {
                 id: 7,
                 title: '🚀 Седьмой шаг',
-                url: 'https://vkvideo.ru/video-193665099_456239026?pl=-193665099_1'
+                videoId: 456239026,
+                hash: '27924639f06ab09a'
             }, {
                 id: 8,
                 title: '🚀 Восьмой шаг',
-                url: 'https://vkvideo.ru/video-193665099_456239027?pl=-193665099_1'
+                videoId: 456239027,
+                hash: 'a2d68ad6279b5380'
             }, {
                 id: 9,
                 title: '🚀 Девятый шаг',
-                url: 'https://vkvideo.ru/video-193665099_456239028?pl=-193665099_1'
+                videoId: 456239028,
+                hash: 'c75810e9468c75b9'
             }, {
                 id: 10,
                 title: '🚀 Финальный, 10-й шаг',
-                url: 'https://vkvideo.ru/video-193665099_456239029?pl=-193665099_1'
+                videoId: 456239029,
+                hash: '93ca513da97c6577'
             }];
 
             // ---- DOM ----
@@ -326,6 +374,9 @@
             const userAvatar = document.getElementById('userAvatar');
             const userName = document.getElementById('userName');
             const stepsContainer = document.getElementById('stepsContainer');
+            const videoContainer = document.getElementById('videoContainer');
+            const videoWrapper = document.getElementById('videoWrapper');
+            const backButton = document.getElementById('backButton');
             const subscribeLink = document.getElementById('subscribeLink');
             const debugToggle = document.getElementById('debugToggle');
             const debugInfo = document.getElementById('debugInfo');
@@ -350,7 +401,7 @@
                 }
             });
 
-            // ---- Определение платформы ----
+            // ---- Определение платформы (для подписки) ----
             let isNative = false;
             let platform = 'unknown';
 
@@ -389,7 +440,7 @@
                 }
             }
 
-            // ---- Fallback через window.open или location.href ----
+            // ---- Fallback для открытия ссылок (для подписки) ----
             function fallbackOpen(url, method) {
                 try {
                     debugLog(`[${method}] Вызываем window.open('${url}', '_blank')`, 'info');
@@ -406,9 +457,9 @@
                 }
             }
 
-            // ---- Универсальный метод открытия ссылок с таймаутом ----
+            // ---- Универсальный метод открытия ссылок (только для подписки) ----
             function openUrl(url, method = 'auto') {
-                debugLog(`[${method}] Открываем URL: ${url} (попытка 1)`, 'info');
+                debugLog(`[${method}] Открываем URL: ${url}`, 'info');
 
                 if (isNative && vkBridge && typeof vkBridge.send === 'function') {
                     debugLog(`[${method}] Пробуем VKWebAppOpenExternal`, 'info');
@@ -441,65 +492,40 @@
                 }
             }
 
-            // ---- Функция открытия видео ----
-            function openStep(url, stepId) {
+            // ---- Встраивание видео через iframe ----
+            function showVideo(step) {
+                // Отправляем метрику
                 if (typeof ym === 'function') {
-                    ym(110303584, 'reachGoal', 'step' + stepId);
+                    ym(110303584, 'reachGoal', 'step' + step.id);
                 }
 
-                debugLog(`Попытка открыть шаг ${stepId}: ${url}`, 'info');
+                debugLog(`Открываем видео ${step.id}: ${step.title} (video_id=${step.videoId})`, 'info');
 
-                const match = url.match(/video(-?\d+)_(\d+)/);
-                if (!match) {
-                    debugLog('Не удалось распарсить ID, открываем как есть', 'warn');
-                    openUrl(url, 'direct');
-                    return;
-                }
+                // Строим iframe
+                const iframeSrc =
+                    `https://vkvideo.ru/video_ext.php?oid=-193665099&id=${step.videoId}&hash=${step.hash}&hd=4`;
+                videoWrapper.innerHTML = `
+                    <iframe src="${iframeSrc}" 
+                            width="100%" 
+                            height="400" 
+                            allow="autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock;" 
+                            frameborder="0" 
+                            allowfullscreen>
+                    </iframe>
+                `;
 
-                const ownerId = parseInt(match[1], 10);
-                const videoId = parseInt(match[2], 10);
-                debugLog(`Парсинг: owner_id=${ownerId}, video_id=${videoId}`, 'success');
+                // Скрываем список шагов, показываем контейнер с видео
+                stepsContainer.style.display = 'none';
+                videoContainer.style.display = 'block';
+                debugLog('Видео встроено в iframe', 'success');
+            }
 
-                // Для веб-версий сразу fallback
-                if (!isNative) {
-                    const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
-                    debugLog(`Открываем в вебе: ${videoUrl}`, 'info');
-                    fallbackOpen(videoUrl, 'web');
-                    return;
-                }
-
-                // Нативная платформа: сначала VKWebAppShowVideo с таймаутом
-                debugLog('Пробуем VKWebAppShowVideo', 'info');
-                let resolved = false;
-                const startTime = Date.now();
-                const promise = vkBridge.send('VKWebAppShowVideo', {
-                    owner_id: ownerId,
-                    video_id: videoId
-                });
-                const timeout = new Promise((resolve) => {
-                    setTimeout(() => {
-                        if (!resolved) resolve('timeout');
-                    }, 3000);
-                });
-
-                Promise.race([promise, timeout])
-                    .then((result) => {
-                        if (result === 'timeout') {
-                            const elapsed = Date.now() - startTime;
-                            debugLog(`VKWebAppShowVideo не ответил за ${elapsed} мс, переходим к fallback`, 'warn');
-                            const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
-                            openUrl(videoUrl, 'fallback-after-timeout');
-                        } else {
-                            resolved = true;
-                            debugLog('Видео открыто через VKWebAppShowVideo', 'success');
-                        }
-                    })
-                    .catch((err) => {
-                        resolved = true;
-                        debugLog(`Ошибка VKWebAppShowVideo: ${err.error_type} - ${err.error_data?.error_reason || 'нет данных'}`, 'error');
-                        const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
-                        openUrl(videoUrl, 'fallback-after-error');
-                    });
+            // ---- Возврат к списку уроков ----
+            function goBack() {
+                videoContainer.style.display = 'none';
+                stepsContainer.style.display = 'flex';
+                videoWrapper.innerHTML = ''; // очищаем iframe
+                debugLog('Возврат к списку уроков', 'info');
             }
 
             // ---- Генерация списка шагов ----
@@ -529,13 +555,13 @@
 
                     btn.addEventListener('click', function(e) {
                         e.preventDefault();
-                        openStep(step.url, step.id);
+                        showVideo(step);
                     });
 
                     btn.addEventListener('keydown', function(e) {
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            openStep(step.url, step.id);
+                            showVideo(step);
                         }
                     });
 
@@ -607,7 +633,10 @@
                 }
             }
 
-            // ---- Добавляем обработку клавиатуры для кнопки подписки ----
+            // ---- Обработчик кнопки "Назад" ----
+            backButton.addEventListener('click', goBack);
+
+            // ---- Клавиатура для кнопки подписки ----
             subscribeLink.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -624,7 +653,7 @@
                     debugLog('Отладка включена через параметр debug=true');
                 }
 
-                debugLog('Приложение загружено, версия 1.1.4');
+                debugLog('Приложение загружено, версия 2.0.0');
 
                 if (vkBridge && typeof vkBridge.send === 'function') {
                     try {
