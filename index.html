@@ -192,17 +192,6 @@
         .debug-entry.warn {
             color: #f57f17;
         }
-        .platform-notice {
-            background: #e3f2fd;
-            border-left: 4px solid #1976d2;
-            padding: 10px 14px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 14px;
-            color: #0d47a1;
-            text-align: left;
-            display: none;
-        }
         #videoContainer {
             margin-top: 20px;
             display: none;
@@ -288,10 +277,6 @@
         <h1>🐧 Первые 10 шагов по консоли Linux</h1>
         <p class="description">Выберите урок, чтобы посмотреть видео-инструкцию:</p>
 
-        <div class="platform-notice" id="platformNotice">
-            ⚠️ Вы используете веб-версию ВКонтакте. Для просмотра видео <strong>внутри приложения</strong> откройте это мини-приложение через мобильное приложение VK.
-        </div>
-
         <div class="subscribe-notice">
             <strong>📢 Для просмотра видео необходимо быть подписанным на группу</strong>
             «Курсы IT для системных администраторов».
@@ -308,14 +293,14 @@
         </div>
 
         <div class="footer-note">Кликайте на шаг – видео откроется автоматически</div>
-        <div class="version" id="debugToggle">Версия 2.0.1</div>
+        <div class="version" id="debugToggle">Версия 2.0.2</div>
 
         <div id="debugInfo"></div>
     </div>
 
     <script>
         (function() {
-            // ---- Данные курса с добавленными hash ----
+            // ---- Данные курса ----
             const STEPS = [{
                 id: 1,
                 title: '🚀 Первый шаг',
@@ -380,7 +365,6 @@
             const subscribeLink = document.getElementById('subscribeLink');
             const debugToggle = document.getElementById('debugToggle');
             const debugInfo = document.getElementById('debugInfo');
-            const platformNotice = document.getElementById('platformNotice');
 
             // ---- Логгер ----
             function debugLog(message, type = 'info') {
@@ -401,46 +385,7 @@
                 }
             });
 
-            // ---- Определение платформы ----
-            let isNative = false;
-            let platform = 'unknown';
-
-            async function detectPlatform() {
-                if (!vkBridge || typeof vkBridge.send !== 'function') {
-                    platform = 'no_bridge';
-                    debugLog('Bridge недоступен, считаем веб-версией', 'warn');
-                    showWebNotice();
-                    return;
-                }
-                try {
-                    const params = await vkBridge.send('VKWebAppGetLaunchParams');
-                    platform = params.vk_platform || 'unknown';
-                    debugLog(`Платформа: ${platform}`, 'info');
-                    if (platform.includes('android') || platform.includes('ios')) {
-                        isNative = true;
-                        debugLog('Нативное приложение VK', 'success');
-                        platformNotice.style.display = 'none';
-                    } else {
-                        isNative = false;
-                        debugLog('Веб-версия VK', 'warn');
-                        showWebNotice();
-                    }
-                } catch (e) {
-                    debugLog(`Ошибка получения платформы: ${e.message}`, 'error');
-                    showWebNotice();
-                    isNative = false;
-                }
-            }
-
-            function showWebNotice() {
-                if (!isNative) {
-                    platformNotice.style.display = 'block';
-                } else {
-                    platformNotice.style.display = 'none';
-                }
-            }
-
-            // ---- Fallback для открытия ссылок (только для подписки и крайний случай) ----
+            // ---- Fallback для открытия ссылок ----
             function fallbackOpen(url, method) {
                 try {
                     debugLog(`[${method}] Вызываем window.open('${url}', '_blank')`, 'info');
@@ -457,10 +402,9 @@
                 }
             }
 
-            // ---- Универсальный метод открытия ссылок (для подписки) ----
             function openUrl(url, method = 'auto') {
                 debugLog(`[${method}] Открываем URL: ${url}`, 'info');
-                if (isNative && vkBridge && typeof vkBridge.send === 'function') {
+                if (vkBridge && typeof vkBridge.send === 'function') {
                     debugLog(`[${method}] Пробуем VKWebAppOpenExternal`, 'info');
                     let resolved = false;
                     const promise = vkBridge.send('VKWebAppOpenExternal', { url: url });
@@ -485,55 +429,18 @@
                             fallbackOpen(url, method);
                         });
                 } else {
-                    debugLog(`[${method}] Bridge не доступен или не нативный, используем fallback`, 'warn');
+                    debugLog(`[${method}] Bridge не доступен, используем fallback`, 'warn');
                     fallbackOpen(url, method);
                 }
             }
 
-            // ---- Открытие видео в нативном приложении ----
-            function openNativeVideo(step) {
-                debugLog(`Открываем видео ${step.id} в нативном приложении`, 'info');
+            // ---- Встраивание видео через iframe (единый способ для всех) ----
+            function showWebVideo(step) {
+                debugLog(`Открываем видео ${step.id} через виджет VK`, 'info');
                 const ownerId = -193665099;
                 const videoId = step.videoId;
-                const videoUrl = `https://vk.com/video${ownerId}_${videoId}`;
-
-                // 1. Пробуем VKWebAppShowVideo
-                debugLog('Пробуем VKWebAppShowVideo', 'info');
-                let resolved = false;
-                const showPromise = vkBridge.send('VKWebAppShowVideo', {
-                    owner_id: ownerId,
-                    video_id: videoId
-                });
-                const timeout = new Promise((resolve) => {
-                    setTimeout(() => {
-                        if (!resolved) resolve('timeout');
-                    }, 3000);
-                });
-
-                Promise.race([showPromise, timeout])
-                    .then((result) => {
-                        if (result === 'timeout') {
-                            debugLog('VKWebAppShowVideo не ответил за 3 сек, переходим к OpenExternal', 'warn');
-                            // 2. Пробуем VKWebAppOpenExternal
-                            openUrl(videoUrl, 'video-openExternal');
-                        } else {
-                            resolved = true;
-                            debugLog('VKWebAppShowVideo успешно отработал', 'success');
-                        }
-                    })
-                    .catch((err) => {
-                        resolved = true;
-                        debugLog(`Ошибка VKWebAppShowVideo: ${err.error_type}`, 'error');
-                        // 2. Пробуем VKWebAppOpenExternal
-                        openUrl(videoUrl, 'video-openExternal');
-                    });
-            }
-
-            // ---- Встраивание видео через iframe (для веба) ----
-            function showWebVideo(step) {
-                debugLog(`Открываем видео ${step.id} через iframe`, 'info');
-                const iframeSrc =
-                    `https://vkvideo.ru/video_ext.php?oid=-193665099&id=${step.videoId}&hash=${step.hash}&hd=4`;
+                const hash = step.hash;
+                const iframeSrc = `https://vk.com/video_ext.php?oid=${ownerId}&id=${videoId}&hash=${hash}&hd=4&autoplay=1`;
                 videoWrapper.innerHTML = `
                     <iframe src="${iframeSrc}" 
                             width="100%" 
@@ -545,24 +452,18 @@
                 `;
                 stepsContainer.style.display = 'none';
                 videoContainer.style.display = 'block';
-                debugLog('Видео встроено в iframe', 'success');
+                debugLog('Видео встроено через виджет VK', 'success');
             }
 
             // ---- Главная функция открытия шага ----
             function openStep(step) {
-                // Отправляем метрику
                 if (typeof ym === 'function') {
                     ym(110303584, 'reachGoal', 'step' + step.id);
                 }
-
-                if (isNative) {
-                    openNativeVideo(step);
-                } else {
-                    showWebVideo(step);
-                }
+                showWebVideo(step);
             }
 
-            // ---- Возврат к списку уроков ----
+            // ---- Возврат к списку ----
             function goBack() {
                 videoContainer.style.display = 'none';
                 stepsContainer.style.display = 'flex';
@@ -570,7 +471,7 @@
                 debugLog('Возврат к списку уроков', 'info');
             }
 
-            // ---- Генерация списка шагов ----
+            // ---- Генерация списка ----
             function renderSteps() {
                 stepsContainer.innerHTML = '';
                 STEPS.forEach(function(step) {
@@ -643,7 +544,7 @@
                 e.preventDefault();
                 const groupUrl = 'https://vk.com/yourITteacher';
                 debugLog('Подписка на группу', 'info');
-                if (isNative && vkBridge && typeof vkBridge.send === 'function') {
+                if (vkBridge && typeof vkBridge.send === 'function') {
                     debugLog('Пробуем VKWebAppOpenGroup', 'info');
                     let resolved = false;
                     const promise = vkBridge.send('VKWebAppOpenGroup', { group_id: 'yourITteacher' });
@@ -685,28 +586,22 @@
             // ---- Инициализация ----
             async function init() {
                 const urlParams = new URLSearchParams(window.location.search);
-                const debugParam = urlParams.get('debug');
-                if (debugParam === 'true') {
+                if (urlParams.get('debug') === 'true') {
                     debugInfo.classList.add('show');
                     debugLog('Отладка включена через параметр debug=true');
                 }
 
-                debugLog('Приложение загружено, версия 2.0.1');
+                debugLog('Приложение загружено, версия 2.0.2');
 
                 if (vkBridge && typeof vkBridge.send === 'function') {
                     try {
                         await vkBridge.send('VKWebAppInit');
                         debugLog('VK Mini App инициализирован', 'success');
-                        await detectPlatform();
                     } catch (err) {
                         debugLog(`Ошибка инициализации: ${err.error_type}`, 'error');
-                        showWebNotice();
-                        isNative = false;
                     }
                 } else {
                     debugLog('Bridge не найден, работаем как веб-приложение', 'warn');
-                    showWebNotice();
-                    isNative = false;
                 }
 
                 renderSteps();
