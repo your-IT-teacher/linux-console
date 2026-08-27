@@ -4,7 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Курс консоли Linux</title>
+
+    <!-- VK Bridge -->
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+
+    <!-- Подключаем стили -->
     <link rel="stylesheet" href="style.css" />
 
     <!-- Yandex.Metrika counter -->
@@ -38,21 +42,25 @@
 <body>
     <div class="app" id="app">
 
+        <!-- Блок пользователя (заполняется JS) -->
         <div id="userBlock" class="user-card" style="display: none;">
             <img id="userAvatar" src="" alt="аватар" />
             <span class="user-name" id="userName">Гость</span>
         </div>
 
+        <!-- Блок вступления в группу -->
         <div id="joinGroupBlock">
             <button class="join-group-button" id="joinGroupButton">📢 Вступить в группу</button>
             <p id="joinGroupStatus" class="join-status"></p>
         </div>
 
+        <!-- Заголовок курса (заполняется JS) -->
         <div id="courseHeader">
             <h1 id="courseTitle"></h1>
             <p class="description" id="courseDescription"></p>
         </div>
 
+        <!-- Список уроков -->
         <div id="stepsContainer" class="steps-list"></div>
 
         <!-- Контейнер для видео и статей -->
@@ -66,12 +74,12 @@
                 </div>
             </div>
 
-            <!-- Блок статей -->
+            <!-- Блок статей (порядок: содержимое → кнопка → список) -->
             <div id="articlesContainer">
                 <h3 class="articles-header">📚 Статьи урока</h3>
-                <div id="articlesList" class="articles-list"></div>
                 <div id="articleContent" class="article-content"></div>
                 <button class="next-article-button" id="nextArticleButton">➡️ Следующая статья</button>
+                <div id="articlesList" class="articles-list"></div>
             </div>
         </div>
 
