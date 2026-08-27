@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.5.3';
+    const APP_VERSION = '2.6.0';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
@@ -16,6 +16,7 @@
     const courseTitle = document.getElementById('courseTitle');
     const courseDescription = document.getElementById('courseDescription');
     const stepsContainer = document.getElementById('stepsContainer');
+    const lessonContainer = document.getElementById('lessonContainer');
     const videoContainer = document.getElementById('videoContainer');
     const videoWrapper = document.getElementById('videoWrapper');
     const backButton = document.getElementById('backButton');
@@ -26,6 +27,12 @@
     const joinGroupButton = document.getElementById('joinGroupButton');
     const joinGroupStatus = document.getElementById('joinGroupStatus');
     const appVersionSpan = document.getElementById('appVersion');
+
+    // Элементы для статей
+    const articlesContainer = document.getElementById('articlesContainer');
+    const articlesList = document.getElementById('articlesList');
+    const articleContent = document.getElementById('articleContent');
+    const nextArticleButton = document.getElementById('nextArticleButton');
 
     const vkBridge = window.vkBridge;
 
@@ -40,6 +47,7 @@
     let currentLessonIndex = 0;
     let progress = {};
     let isGroupMember = false;
+    let currentArticleIndex = 0;
 
     // ---- Логгер ----
     function debugLog(message, type = 'info') {
@@ -242,7 +250,7 @@
         alert('Прогресс курса сброшен. Вы можете начать обучение заново.');
     }
 
-    // ---- Проверка членства в группе (расширенный debug) ----
+    // ---- Проверка членства в группе (исправленная) ----
     async function checkGroupMembership() {
         if (!vkBridge || typeof vkBridge.send !== 'function') {
             joinGroupButton.disabled = true;
@@ -282,7 +290,7 @@
             if (data && typeof data.id !== 'undefined' && typeof data.is_member !== 'undefined') {
                 found = true;
                 isMember = data.is_member === 1 || data.is_member === true || data.is_member === '1';
-                debugLog(`Нашли is_member в самом объекте (без обёртки): ${data.is_member} -> ${isMember}`, 'info');
+                debugLog(`Нашли is_member в самом объекте: ${data.is_member} -> ${isMember}`, 'info');
             }
 
             if (!found) {
@@ -308,7 +316,7 @@
                 joinGroupButton.textContent = '📢 Вступить в группу';
                 joinGroupButton.disabled = false;
                 joinGroupStatus.textContent = 'Подпишитесь, чтобы не пропустить новые вебинары и получить доступ к закрытому контенту.';
-                debugLog('Пользователь не состоит в группе или не удалось определить', 'info');
+                debugLog('Пользователь не состоит в группе', 'info');
             }
         } catch (error) {
             debugLog(`Ошибка VKWebAppGetGroupInfo: ${error.error_type || error.message}`, 'error');
@@ -359,7 +367,7 @@
         }
     }
 
-    // ---- Инициализация прогресса для урока ----
+    // ---- Инициализация прогресса для урока (включая статьи и задачи) ----
     function ensureLessonProgress(lessonId, lessonData) {
         if (!progress[lessonId]) {
             progress[lessonId] = { videos: [], articles: [], tasks: [] };
@@ -393,6 +401,7 @@
         }
     }
 
+    // ---- Работа со статусами видео ----
     function getLessonVideoStatus(lessonId) {
         const p = progress[lessonId];
         if (!p || !p.videos || p.videos.length === 0) return 'not_started';
@@ -412,6 +421,167 @@
         renderSteps();
     }
 
+    // ---- Работа со статьями ----
+    function getArticleStatus(lessonId, articleIndex) {
+        const p = progress[lessonId];
+        if (!p || !p.articles || articleIndex >= p.articles.length) {
+            return 'not_started';
+        }
+        return p.articles[articleIndex] || 'not_started';
+    }
+
+    async function setArticleStatus(lessonId, articleIndex, status) {
+        ensureLessonProgress(lessonId);
+        if (articleIndex < 0 || articleIndex >= progress[lessonId].articles.length) {
+            debugLog(`Ошибка: индекс статьи ${articleIndex} вне диапазона`, 'error');
+            return;
+        }
+        progress[lessonId].articles[articleIndex] = status;
+        await saveProgressToStorage(progress);
+        renderArticles(currentLesson);
+    }
+
+    function renderArticles(lessonData) {
+        if (!lessonData || !lessonData.articles || lessonData.articles.length === 0) {
+            articlesContainer.style.display = 'none';
+            return;
+        }
+        articlesContainer.style.display = 'block';
+
+        const articles = lessonData.articles;
+        const lessonId = lessonData.id;
+
+        // Строим список статей
+        let html = '';
+        articles.forEach((article, index) => {
+            const status = getArticleStatus(lessonId, index);
+            let statusIcon = '🔵';
+            let statusClass = 'status-not_started';
+            if (status === 'studying') {
+                statusIcon = '📖';
+                statusClass = 'status-studying';
+            } else if (status === 'read') {
+                statusIcon = '✅';
+                statusClass = 'status-read';
+            }
+            html += `
+                <div class="article-item ${statusClass}" data-index="${index}">
+                    <span class="article-status">${statusIcon}</span>
+                    <span class="article-title">${article.title}</span>
+                </div>
+            `;
+        });
+        articlesList.innerHTML = html;
+
+        // Навешиваем обработчики кликов на статьи
+        document.querySelectorAll('.article-item').forEach(el => {
+            el.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                openArticle(index);
+            });
+        });
+
+        // Отображаем текущую статью
+        if (currentArticleIndex < articles.length) {
+            // Если текущая статья не установлена, выбираем первую, у которой статус studying, иначе первую
+            let targetIndex = currentArticleIndex;
+            // Проверим, есть ли studying
+            let studyingIndex = -1;
+            for (let i = 0; i < articles.length; i++) {
+                if (getArticleStatus(lessonId, i) === 'studying') {
+                    studyingIndex = i;
+                    break;
+                }
+            }
+            if (studyingIndex !== -1) {
+                targetIndex = studyingIndex;
+            } else {
+                // Ищем первую not_started
+                let notStartedIndex = -1;
+                for (let i = 0; i < articles.length; i++) {
+                    if (getArticleStatus(lessonId, i) === 'not_started') {
+                        notStartedIndex = i;
+                        break;
+                    }
+                }
+                if (notStartedIndex !== -1) {
+                    targetIndex = notStartedIndex;
+                } else {
+                    // все прочитаны — оставляем последнюю
+                    targetIndex = articles.length - 1;
+                }
+            }
+            currentArticleIndex = targetIndex;
+            openArticle(targetIndex);
+        } else {
+            currentArticleIndex = 0;
+            openArticle(0);
+        }
+
+        updateNextArticleButton();
+    }
+
+    function openArticle(index) {
+        if (!currentLesson) return;
+        const articles = currentLesson.articles;
+        if (!articles || index < 0 || index >= articles.length) return;
+
+        currentArticleIndex = index;
+        const article = articles[index];
+        const lessonId = currentLesson.id;
+
+        // Устанавливаем статус studying
+        setArticleStatus(lessonId, index, 'studying');
+
+        // Отображаем содержимое
+        articleContent.innerHTML = article.content;
+
+        // Обновляем список статей (чтобы обновить иконки)
+        renderArticles(currentLesson); // вызываем повторно, чтобы обновить статусы в списке
+
+        updateNextArticleButton();
+    }
+
+    function updateNextArticleButton() {
+        if (!currentLesson || !currentLesson.articles) {
+            nextArticleButton.style.display = 'none';
+            return;
+        }
+        const articles = currentLesson.articles;
+        const nextIndex = currentArticleIndex + 1;
+        if (nextIndex < articles.length) {
+            nextArticleButton.style.display = 'inline-block';
+            nextArticleButton.disabled = false;
+            nextArticleButton.textContent = `➡️ Следующая статья (${nextIndex+1}/${articles.length})`;
+        } else {
+            nextArticleButton.style.display = 'inline-block';
+            nextArticleButton.disabled = true;
+            nextArticleButton.textContent = '✅ Все статьи изучены';
+        }
+    }
+
+    async function nextArticle() {
+        if (!currentLesson || !currentLesson.articles) return;
+        const articles = currentLesson.articles;
+        const lessonId = currentLesson.id;
+
+        // Помечаем текущую как прочитанную
+        await setArticleStatus(lessonId, currentArticleIndex, 'read');
+
+        // Переходим к следующей, если есть
+        const nextIndex = currentArticleIndex + 1;
+        if (nextIndex < articles.length) {
+            openArticle(nextIndex);
+        } else {
+            // Все статьи изучены
+            nextArticleButton.disabled = true;
+            nextArticleButton.textContent = '✅ Все статьи изучены';
+            // Дополнительно можно показать сообщение
+            articleContent.innerHTML += '<p style="color:green;font-weight:bold;">🎉 Поздравляем! Вы изучили все статьи этого урока.</p>';
+        }
+    }
+
+    // ---- Загрузка JSON ----
     async function loadJSON(url) {
         debugLog(`Загрузка ${url}`, 'info');
         const response = await fetch(url);
@@ -421,6 +591,7 @@
         return response.json();
     }
 
+    // ---- Получение информации о пользователе ----
     async function fetchUserInfo() {
         try {
             if (!vkBridge || typeof vkBridge.send !== 'function') {
@@ -447,6 +618,7 @@
         }
     }
 
+    // ---- Отображение списка уроков ----
     function renderSteps() {
         if (!currentCourse) return;
 
@@ -501,6 +673,7 @@
         updateDoneButtonVisibility();
     }
 
+    // ---- Открытие урока ----
     async function openLesson(lesson, index) {
         try {
             if (typeof ym === 'function') {
@@ -520,12 +693,28 @@
             currentLesson = lessonData;
             currentLessonIndex = index;
 
+            // Показываем контейнер урока
+            lessonContainer.style.display = 'block';
+            stepsContainer.style.display = 'none';
+
+            // Видео
             if (lessonData.videos && lessonData.videos.length > 0) {
+                videoContainer.style.display = 'block';
                 await setVideoStatus(lesson.id, 0, 'studying');
                 showVideo(lessonData.videos[0]);
             } else {
-                debugLog('В уроке нет видео', 'warn');
-                alert('В этом уроке пока нет видео.');
+                videoContainer.style.display = 'none';
+            }
+
+            // Статьи
+            if (lessonData.articles && lessonData.articles.length > 0) {
+                // Инициализируем индекс первой статьи, если ещё не установлен
+                if (typeof currentArticleIndex === 'undefined' || currentArticleIndex === null) {
+                    currentArticleIndex = 0;
+                }
+                renderArticles(lessonData);
+            } else {
+                articlesContainer.style.display = 'none';
             }
 
             updateDoneButtonVisibility();
@@ -535,6 +724,7 @@
         }
     }
 
+    // ---- Показ видео ----
     function showVideo(video) {
         const ownerId = -193665099;
         const videoId = video.videoId;
@@ -553,15 +743,25 @@
                     allowfullscreen>
             </iframe>
         `;
-        stepsContainer.style.display = 'none';
-        videoContainer.style.display = 'block';
         debugLog(`Видео ${videoId} встроено`, 'success');
     }
 
+    // ---- Кнопка "Сделано! Перейти к следующему" ----
     async function markAsDone() {
         if (!currentLesson) return;
 
         const lessonId = currentLesson.id;
+        // Проверяем, все ли статьи прочитаны (если есть)
+        if (currentLesson.articles && currentLesson.articles.length > 0) {
+            const allRead = progress[lessonId].articles.every(s => s === 'read');
+            if (!allRead) {
+                const confirmMsg = 'Вы ещё не прочитали все статьи этого урока. Отметить урок как завершённый?';
+                if (!confirm(confirmMsg)) {
+                    return;
+                }
+            }
+        }
+
         if (currentLesson.videos && currentLesson.videos.length > 0) {
             await setVideoStatus(lessonId, 0, 'done');
         }
@@ -577,18 +777,23 @@
         }
     }
 
+    // ---- Обновление видимости кнопки "Сделано" ----
     function updateDoneButtonVisibility() {
-        if (currentLesson && videoContainer.style.display === 'block') {
+        if (currentLesson && lessonContainer.style.display === 'block') {
             doneButton.style.display = 'inline-block';
         } else {
             doneButton.style.display = 'none';
         }
     }
 
+    // ---- Возврат к списку ----
     function goBack() {
-        videoContainer.style.display = 'none';
+        lessonContainer.style.display = 'none';
         stepsContainer.style.display = 'flex';
         videoWrapper.innerHTML = '';
+        videoContainer.style.display = 'none';
+        articlesContainer.style.display = 'none';
+        articleContent.innerHTML = '';
         currentLesson = null;
         doneButton.style.display = 'none';
         debugLog('Возврат к списку', 'info');
@@ -639,6 +844,7 @@
         doneButton.addEventListener('click', markAsDone);
         resetButton.addEventListener('click', resetProgress);
         joinGroupButton.addEventListener('click', handleJoinGroup);
+        nextArticleButton.addEventListener('click', nextArticle);
     }
 
     function renderCourse(course) {
