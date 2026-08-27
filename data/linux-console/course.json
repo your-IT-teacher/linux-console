@@ -1,0 +1,17 @@
+{
+  "id": "linux-console",
+  "title": "🐧 Первые 10 шагов по консоли Linux",
+  "description": "Выберите урок, чтобы посмотреть видео-инструкцию:",
+  "lessons": [
+    { "id": 1, "title": "Первый шаг", "file": "lessons/1.json" },
+    { "id": 2, "title": "Второй шаг", "file": "lessons/2.json" },
+    { "id": 3, "title": "Третий шаг", "file": "lessons/3.json" },
+    { "id": 4, "title": "Четвёртый шаг", "file": "lessons/4.json" },
+    { "id": 5, "title": "Пятый шаг", "file": "lessons/5.json" },
+    { "id": 6, "title": "Шестой шаг", "file": "lessons/6.json" },
+    { "id": 7, "title": "Седьмой шаг", "file": "lessons/7.json" },
+    { "id": 8, "title": "Восьмой шаг", "file": "lessons/8.json" },
+    { "id": 9, "title": "Девятый шаг", "file": "lessons/9.json" },
+    { "id": 10, "title": "Финальный, 10-й шаг", "file": "lessons/10.json" }
+  ]
+}
