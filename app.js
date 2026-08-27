@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.8.1';
+    const APP_VERSION = '2.8.2';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
@@ -67,8 +67,8 @@
     let articleCache = {};
 
     // Состояние тестирования
-    let tasksMeta = [];          // массив метаданных заданий (id, file)
-    let tasksData = [];          // массив загруженных данных заданий (null, если не загружено)
+    let tasksMeta = [];
+    let tasksData = [];
     let currentTaskIndex = 0;
     let currentTaskAttempt = null;
     let isAnswerChecked = false;
@@ -605,16 +605,15 @@
         renderTasksProgress();
     }
 
-    // ---- Загрузка заданий (только метаданные, без содержимого) ----
+    // ---- Загрузка заданий (только метаданные) ----
     async function loadTasks(lessonData) {
         if (!lessonData || !lessonData.tasks || lessonData.tasks.length === 0) {
             startTestButton.style.display = 'none';
             return;
         }
         startTestButton.style.display = 'inline-block';
-        // Сохраняем метаданные, но не загружаем содержимое
         tasksMeta = lessonData.tasks;
-        tasksData = new Array(tasksMeta.length).fill(null); // кеш для данных
+        tasksData = new Array(tasksMeta.length).fill(null);
         const lessonId = lessonData.id;
         ensureLessonProgress(lessonId, lessonData);
         renderTasksProgress();
@@ -622,7 +621,7 @@
         isAnswerChecked = false;
     }
 
-    // ---- Загрузка конкретного задания по индексу ----
+    // ---- Загрузка конкретного задания ----
     async function loadTaskContent(index) {
         if (tasksData[index] !== null) {
             return tasksData[index];
@@ -664,7 +663,6 @@
 
     async function showTask(index) {
         if (!tasksMeta || index < 0 || index >= tasksMeta.length) return;
-        // Загружаем данные, если ещё не загружены
         let taskData = await loadTaskContent(index);
         if (!taskData) {
             testQuestion.innerHTML = '<p>Не удалось загрузить задание.</p>';
@@ -691,9 +689,11 @@
         });
         testOptions.innerHTML = optionsHTML;
 
+        // Сброс состояния кнопки, если задание уже проверено
         if (isAnswerChecked) {
             checkButton.textContent = 'Проверено ✓';
             checkButton.disabled = true;
+            // Показать подсказку, если была ошибка
             if (currentTaskAttempt !== null) {
                 const selectedOption = options[currentTaskAttempt];
                 if (selectedOption && !selectedOption.is_correct) {
@@ -713,8 +713,14 @@
         } else {
             checkButton.textContent = 'Проверить';
             checkButton.disabled = false;
-            document.querySelectorAll('.option-feedback').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.test-option').forEach(el => el.style.backgroundColor = '');
+            checkButton.onclick = checkAnswer;
+            document.querySelectorAll('.option-feedback').forEach(el => {
+                el.style.display = 'none';
+                el.textContent = '';
+            });
+            document.querySelectorAll('.test-option').forEach(el => {
+                el.style.backgroundColor = '';
+            });
         }
 
         const nextIndex = index + 1;
@@ -747,6 +753,7 @@
 
         currentTaskAttempt = selectedIndex;
 
+        // Отключаем все радио-кнопки
         document.querySelectorAll('input[name="task"]').forEach(el => el.disabled = true);
 
         if (isCorrect) {
@@ -765,19 +772,28 @@
                 nextTaskButton.textContent = 'Завершить тестирование';
             }
         } else {
+            // Неправильный ответ – показываем подсказку и меняем кнопку
             checkButton.textContent = 'Попробовать ещё раз';
             const feedbackDiv = document.querySelectorAll('.test-option')[selectedIndex].querySelector('.option-feedback');
             if (feedbackDiv) {
-                feedbackDiv.textContent = selectedOption.feedback || 'Неверно. Попробуйте ещё раз.';
+                const feedbackText = selectedOption.feedback || 'Неверно. Попробуйте ещё раз.';
+                feedbackDiv.textContent = feedbackText;
                 feedbackDiv.style.display = 'block';
                 feedbackDiv.style.color = 'red';
+                debugLog(`Показана подсказка: ${feedbackText}`, 'info');
+            } else {
+                debugLog('Не найден .option-feedback для варианта', 'error');
             }
             nextTaskButton.disabled = true;
+            // Меняем обработчик на retryAnswer
             checkButton.onclick = retryAnswer;
+            // Сохраняем статус failed (но только после того, как пользователь нажмёт "Попробовать ещё раз")
+            // Здесь не сохраняем, чтобы дать шанс исправиться
         }
     }
 
     function retryAnswer() {
+        // Сброс: снимаем выделение, убираем подсказки, разблокируем радио
         document.querySelectorAll('input[name="task"]').forEach(el => {
             el.checked = false;
             el.disabled = false;
@@ -795,8 +811,10 @@
         checkButton.disabled = false;
         checkButton.onclick = checkAnswer;
         nextTaskButton.disabled = true;
+        // Сохраняем статус failed (пользователь ошибся и пробует снова)
         const lessonId = currentLesson.id;
         setTaskStatus(lessonId, currentTaskIndex, 'failed');
+        debugLog(`Задание ${currentTaskIndex+1} помечено как failed (повторная попытка)`, 'info');
     }
 
     // ---- Переход к следующему заданию ----
