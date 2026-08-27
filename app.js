@@ -30,7 +30,7 @@
     let currentLesson = null;
     let currentLessonIndex = 0;
     let progress = {};
-    let isGroupMember = false; // статус членства в группе
+    let isGroupMember = false;
 
     // ---- Логгер ----
     function debugLog(message, type = 'info') {
@@ -233,7 +233,7 @@
         alert('Прогресс курса сброшен. Вы можете начать обучение заново.');
     }
 
-    // ---- Проверка членства в группе ----
+    // ---- Проверка членства в группе (исправленная) ----
     async function checkGroupMembership() {
         if (!vkBridge || typeof vkBridge.send !== 'function') {
             joinGroupButton.disabled = true;
@@ -245,25 +245,30 @@
         try {
             const data = await vkBridge.send('VKWebAppGetGroupInfo', { group_id: GROUP_ID });
             debugLog(`VKWebAppGetGroupInfo ответ: ${JSON.stringify(data)}`, 'info');
-            // В ответе приходит объект с полем "is_member" (boolean)
-            if (data && typeof data.is_member !== 'undefined') {
-                isGroupMember = data.is_member;
-                if (isGroupMember) {
-                    joinGroupButton.classList.add('joined');
-                    joinGroupButton.textContent = '✅ Вы в группе!';
-                    joinGroupButton.disabled = true;
-                    joinGroupStatus.textContent = 'Спасибо, что подписались! Вы будете получать уведомления о новых вебинарах.';
-                } else {
-                    joinGroupButton.classList.remove('joined');
-                    joinGroupButton.textContent = '📢 Вступить в группу';
-                    joinGroupButton.disabled = false;
-                    joinGroupStatus.textContent = 'Подпишитесь, чтобы не пропустить новые вебинары и получить доступ к закрытому контенту.';
-                }
-            } else {
-                debugLog('Не удалось определить членство в группе', 'warn');
+
+            // Правильный парсинг: is_member находится внутри group
+            let isMember = false;
+            if (data && data.group && typeof data.group.is_member !== 'undefined') {
+                isMember = data.group.is_member === 1 || data.group.is_member === true;
+            } else if (data && typeof data.is_member !== 'undefined') {
+                // fallback для других версий API
+                isMember = data.is_member === 1 || data.is_member === true;
+            }
+
+            isGroupMember = isMember;
+
+            if (isGroupMember) {
+                joinGroupButton.classList.add('joined');
+                joinGroupButton.textContent = '✅ Вы в группе!';
                 joinGroupButton.disabled = true;
-                joinGroupButton.textContent = '⚠️ Ошибка';
-                joinGroupStatus.textContent = 'Не удалось проверить подписку. Попробуйте позже.';
+                joinGroupStatus.textContent = 'Спасибо, что подписались! Вы будете получать уведомления о новых вебинарах.';
+                debugLog('Пользователь состоит в группе', 'success');
+            } else {
+                joinGroupButton.classList.remove('joined');
+                joinGroupButton.textContent = '📢 Вступить в группу';
+                joinGroupButton.disabled = false;
+                joinGroupStatus.textContent = 'Подпишитесь, чтобы не пропустить новые вебинары и получить доступ к закрытому контенту.';
+                debugLog('Пользователь не состоит в группе', 'info');
             }
         } catch (error) {
             debugLog(`Ошибка VKWebAppGetGroupInfo: ${error.error_type || error.message}`, 'error');
@@ -556,7 +561,7 @@
             debugLog('Отладка включена через параметр debug=true');
         }
 
-        debugLog('Приложение загружено, версия 2.5.0');
+        debugLog('Приложение загружено, версия 2.5.1');
 
         if (vkBridge && typeof vkBridge.send === 'function') {
             try {
@@ -570,8 +575,6 @@
         }
 
         await fetchUserInfo();
-
-        // Проверяем членство в группе
         await checkGroupMembership();
 
         try {
