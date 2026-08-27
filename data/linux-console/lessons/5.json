@@ -4,6 +4,27 @@
   "videos": [
     { "id": "vid1", "title": "Видео-урок", "videoId": 456239023, "hash": "ee5dcb009617ae82" }
   ],
-  "articles": [],
+  "articles": [
+    {
+      "id": "art1",
+      "title": "Структура файловой системы Linux",
+      "file": "articles/art1.json"
+    },
+    {
+      "id": "art2",
+      "title": "Типы файлов и ссылки (file, ln -s, ln)",
+      "file": "articles/art2.json"
+    },
+    {
+      "id": "art3",
+      "title": "Поиск файлов (find)",
+      "file": "articles/art3.json"
+    },
+    {
+      "id": "art4",
+      "title": "Поиск текста внутри файлов (grep) с использованием конвейеров",
+      "file": "articles/art4.json"
+    }
+  ],
   "tasks": []
 }

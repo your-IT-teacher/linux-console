@@ -4,6 +4,22 @@
   "videos": [
     { "id": "vid1", "title": "Видео-урок", "videoId": 456239022, "hash": "d83d06865d731f4b" }
   ],
-  "articles": [],
+  "articles": [
+    {
+      "id": "art1",
+      "title": "Перенаправление вывода (> и >>, 2>)",
+      "file": "articles/art1.json"
+    },
+    {
+      "id": "art2",
+      "title": "Перенаправление ввода (< и <<)",
+      "file": "articles/art2.json"
+    },
+    {
+      "id": "art3",
+      "title": "Конвейер (Pipe)",
+      "file": "articles/art3.json"
+    }
+  ],
   "tasks": []
 }

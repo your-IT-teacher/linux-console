@@ -4,6 +4,17 @@
   "videos": [
     { "id": "vid1", "title": "Видео-урок", "videoId": 456239021, "hash": "fa7afa9f4740ee3e" }
   ],
-  "articles": [],
+  "articles": [
+    {
+      "id": "art1",
+      "title": "Nano: ваш первый текстовый редактор в терминале",
+      "file": "articles/art1.json"
+    },
+    {
+      "id": "art2",
+      "title": "Vim: мощный, но сложный редактор",
+      "file": "articles/art2.json"
+    }
+  ],
   "tasks": []
 }

@@ -4,6 +4,22 @@
   "videos": [
     { "id": "vid1", "title": "Видео-урок", "videoId": 456239025, "hash": "934f941e416dc5fa" }
   ],
-  "articles": [],
+  "articles": [
+    {
+      "id": "art1",
+      "title": "Посмотреть права (ls -l)",
+      "file": "articles/art1.json"
+    },
+    {
+      "id": "art2",
+      "title": "Смена прав (chmod)",
+      "file": "articles/art2.json"
+    },
+    {
+      "id": "art3",
+      "title": "Смена владельца и группы (chown, chgrp)",
+      "file": "articles/art3.json"
+    }
+  ],
   "tasks": []
 }
