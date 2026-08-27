@@ -506,3 +506,149 @@ h1 {
         padding: 12px;
     }
 }
+
+/* ---- Тестирование ---- */
+#testContainer {
+    margin-top: 20px;
+}
+
+.test-header {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1c1c1e;
+    margin-bottom: 12px;
+}
+
+.test-progress {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.task-progress-item {
+    font-size: 24px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.task-progress-item:hover {
+    transform: scale(1.2);
+}
+
+.test-question {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.test-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.test-option {
+    background: #f8f9fa;
+    border: 1px solid #e9ebf0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    transition: background 0.15s;
+}
+
+.test-option:hover {
+    background: #edf0f5;
+}
+
+.test-option label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.test-option input[type="radio"] {
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.option-feedback {
+    margin-top: 6px;
+    font-size: 14px;
+    padding: 6px 10px;
+    background: #fff3f3;
+    border-radius: 6px;
+    border-left: 4px solid #d32f2f;
+}
+
+.test-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 16px 0;
+}
+
+.check-button {
+    background: #2787f5;
+    color: #ffffff;
+    padding: 8px 24px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.check-button:hover:not(:disabled) {
+    background: #1a6bc4;
+}
+
+.check-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.next-button {
+    background: #4caf50;
+    color: #ffffff;
+    padding: 8px 24px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.next-button:hover:not(:disabled) {
+    background: #388e3c;
+}
+
+.next-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.test-button {
+    background: #ff9800;
+    color: #ffffff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-left: 8px;
+}
+
+.test-button:hover {
+    background: #f57c00;
+}
