@@ -4,6 +4,22 @@
   "videos": [
     { "id": "vid1", "title": "Видео-урок", "videoId": 456239028, "hash": "c75810e9468c75b9" }
   ],
-  "articles": [],
+  "articles": [
+    {
+      "id": "art1",
+      "title": "Создание архива (tar -czf)",
+      "file": "articles/art1.json"
+    },
+    {
+      "id": "art2",
+      "title": "Просмотр содержимого архива (tar -tzf)",
+      "file": "articles/art2.json"
+    },
+    {
+      "id": "art3",
+      "title": "Распаковка архива (tar -xzf)",
+      "file": "articles/art3.json"
+    }
+  ],
   "tasks": []
 }
