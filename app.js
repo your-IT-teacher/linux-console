@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.8.5';
+    const APP_VERSION = '2.8.6';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
@@ -73,7 +73,7 @@
     let currentTaskAttempt = null;
     let isAnswerChecked = false;
 
-    // ---- Логгер ----
+    // ---- Логгер (оставляем только важное) ----
     function debugLog(message, type = 'info') {
         const entry = document.createElement('div');
         entry.className = `debug-entry ${type}`;
@@ -92,7 +92,7 @@
         }
     });
 
-    // ---- Вспомогательные функции для открытия ссылок ----
+    // ---- Вспомогательные функции ----
     function fallbackOpen(url) {
         try {
             const win = window.open(url, '_blank');
@@ -132,7 +132,7 @@
         }
     }
 
-    // ---- Работа с хранилищем ----
+    // ---- Работа с хранилищем (без лишних логов) ----
     function getStorageKey() {
         return STORAGE_PREFIX + DEFAULT_COURSE;
     }
@@ -140,22 +140,18 @@
     async function saveProgressToStorage(progressData) {
         const key = getStorageKey();
         const value = JSON.stringify(progressData);
+        // Не логируем огромные данные, только факт сохранения
         debugLog(`Сохранение прогресса: ключ = ${key}`, 'info');
-        debugLog(`Данные для сохранения: ${value}`, 'info');
 
         if (vkBridge && typeof vkBridge.send === 'function') {
             try {
                 const response = await vkBridge.send('VKWebAppStorageSet', { key, value });
-                debugLog(`Ответ VK Storage Set: ${JSON.stringify(response)}`, 'info');
                 debugLog('Прогресс сохранён в VK Storage', 'success');
             } catch (err) {
                 debugLog(`Ошибка сохранения в VK Storage: ${err.error_type}`, 'error');
-                debugLog(`Детали: ${JSON.stringify(err)}`, 'error');
                 try {
                     localStorage.setItem(key, value);
                     debugLog('Прогресс сохранён в localStorage (fallback)', 'warn');
-                    const saved = localStorage.getItem(key);
-                    debugLog(`Проверка localStorage: ${saved}`, 'info');
                 } catch (e) {
                     debugLog(`Ошибка сохранения в localStorage: ${e.message}`, 'error');
                 }
@@ -164,8 +160,6 @@
             try {
                 localStorage.setItem(key, value);
                 debugLog('Прогресс сохранён в localStorage', 'warn');
-                const saved = localStorage.getItem(key);
-                debugLog(`Проверка localStorage: ${saved}`, 'info');
             } catch (e) {
                 debugLog(`Ошибка сохранения в localStorage: ${e.message}`, 'error');
             }
@@ -179,34 +173,25 @@
         if (vkBridge && typeof vkBridge.send === 'function') {
             try {
                 const data = await vkBridge.send('VKWebAppStorageGet', { keys: [key] });
-                debugLog(`Ответ VK Storage Get: ${JSON.stringify(data)}`, 'info');
                 if (data && data.keys && Array.isArray(data.keys)) {
                     const found = data.keys.find(item => item.key === key);
                     if (found && found.value) {
                         const parsed = JSON.parse(found.value);
-                        debugLog(`Прогресс загружен из VK Storage: ${JSON.stringify(parsed)}`, 'success');
+                        debugLog('Прогресс загружен из VK Storage', 'success');
                         return parsed;
-                    } else {
-                        debugLog('В VK Storage нет данных по ключу', 'warn');
                     }
-                } else {
-                    debugLog('Неожиданный формат ответа VK Storage', 'warn');
                 }
             } catch (err) {
                 debugLog(`Ошибка загрузки из VK Storage: ${err.error_type}`, 'error');
-                debugLog(`Детали: ${JSON.stringify(err)}`, 'error');
             }
         }
 
         try {
             const localData = localStorage.getItem(key);
-            debugLog(`Проверка localStorage: ${localData}`, 'info');
             if (localData) {
                 const parsed = JSON.parse(localData);
-                debugLog(`Прогресс загружен из localStorage (fallback): ${JSON.stringify(parsed)}`, 'warn');
+                debugLog('Прогресс загружен из localStorage (fallback)', 'warn');
                 return parsed;
-            } else {
-                debugLog('В localStorage нет данных по ключу', 'warn');
             }
         } catch (e) {
             debugLog(`Ошибка загрузки из localStorage: ${e.message}`, 'error');
@@ -252,7 +237,7 @@
         alert('Прогресс курса сброшен. Вы можете начать обучение заново.');
     }
 
-    // ---- Проверка членства в группе ----
+    // ---- Проверка членства в группе (без лишних логов) ----
     async function checkGroupMembership() {
         if (!vkBridge || typeof vkBridge.send !== 'function') {
             joinGroupButton.disabled = true;
@@ -263,42 +248,11 @@
 
         try {
             const data = await vkBridge.send('VKWebAppGetGroupInfo', { group_id: GROUP_ID });
-            debugLog(`VKWebAppGetGroupInfo ответ (сырой): ${JSON.stringify(data)}`, 'info');
-
             let isMember = false;
-            let found = false;
-
             if (data && typeof data.is_member !== 'undefined') {
-                found = true;
                 isMember = data.is_member === 1 || data.is_member === true || data.is_member === '1';
-                debugLog(`Нашли is_member на верхнем уровне: ${data.is_member} -> ${isMember}`, 'info');
-            }
-            if (data && data.group && typeof data.group.is_member !== 'undefined') {
-                found = true;
-                const val = data.group.is_member;
-                isMember = val === 1 || val === true || val === '1';
-                debugLog(`Нашли is_member в data.group: ${val} -> ${isMember}`, 'info');
-            }
-            if (Array.isArray(data) && data.length > 0 && data[0].group && typeof data[0].group.is_member !== 'undefined') {
-                found = true;
-                const val = data[0].group.is_member;
-                isMember = val === 1 || val === true || val === '1';
-                debugLog(`Нашли is_member в data[0].group: ${val} -> ${isMember}`, 'info');
-            }
-            if (data && typeof data.id !== 'undefined' && typeof data.is_member !== 'undefined') {
-                found = true;
-                isMember = data.is_member === 1 || data.is_member === true || data.is_member === '1';
-                debugLog(`Нашли is_member в самом объекте: ${data.is_member} -> ${isMember}`, 'info');
-            }
-
-            if (!found) {
-                debugLog('Не удалось найти поле is_member ни в одном из вариантов. Структура data:', 'warn');
-                if (data && typeof data === 'object') {
-                    debugLog(`Ключи data: ${Object.keys(data).join(', ')}`, 'warn');
-                    if (data.group) {
-                        debugLog(`Ключи data.group: ${Object.keys(data.group).join(', ')}`, 'warn');
-                    }
-                }
+            } else if (data && data.group && typeof data.group.is_member !== 'undefined') {
+                isMember = data.group.is_member === 1 || data.group.is_member === true || data.group.is_member === '1';
             }
 
             isGroupMember = isMember;
@@ -318,7 +272,6 @@
             }
         } catch (error) {
             debugLog(`Ошибка VKWebAppGetGroupInfo: ${error.error_type || error.message}`, 'error');
-            debugLog(`Детали ошибки: ${JSON.stringify(error)}`, 'error');
             joinGroupButton.disabled = true;
             joinGroupButton.textContent = '⚠️ Ошибка';
             joinGroupStatus.textContent = 'Не удалось проверить подписку. Попробуйте позже.';
@@ -343,7 +296,6 @@
 
         try {
             const data = await vkBridge.send('VKWebAppJoinGroup', { group_id: GROUP_ID });
-            debugLog(`VKWebAppJoinGroup ответ: ${JSON.stringify(data)}`, 'info');
             if (data && data.result) {
                 isGroupMember = true;
                 joinGroupButton.classList.add('joined');
@@ -365,7 +317,7 @@
         }
     }
 
-    // ---- Инициализация прогресса для урока ----
+    // ---- Инициализация прогресса ----
     function ensureLessonProgress(lessonId, lessonData) {
         if (!progress[lessonId]) {
             progress[lessonId] = { videos: [], articles: [], tasks: [] };
@@ -733,9 +685,12 @@
         testContainer.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // ---- Проверка ответа ----
+    // ---- Проверка ответа (с детальной отладкой) ----
     function checkAnswer() {
-        if (isAnswerChecked) return;
+        if (isAnswerChecked) {
+            debugLog('checkAnswer: уже проверено, выходим', 'warn');
+            return;
+        }
         const selectedRadio = document.querySelector('input[name="task"]:checked');
         if (!selectedRadio) {
             alert('Пожалуйста, выберите вариант ответа.');
@@ -743,7 +698,10 @@
         }
         const selectedIndex = parseInt(selectedRadio.value);
         const taskData = tasksData[currentTaskIndex];
-        if (!taskData) return;
+        if (!taskData) {
+            debugLog('checkAnswer: нет данных задания', 'error');
+            return;
+        }
         const options = taskData.block.source.options;
         const selectedOption = options[selectedIndex];
         const isCorrect = selectedOption.is_correct;
@@ -754,6 +712,7 @@
         document.querySelectorAll('input[name="task"]').forEach(el => el.disabled = true);
 
         if (isCorrect) {
+            debugLog('Правильный ответ!', 'success');
             checkButton.textContent = '✅ Правильно!';
             checkButton.disabled = true;
             const optionDiv = document.querySelectorAll('.test-option')[selectedIndex];
@@ -783,6 +742,15 @@
                     feedbackDiv.textContent = feedbackText;
                     feedbackDiv.classList.add('show');
                     debugLog(`Подсказка отображена: ${feedbackText}`, 'info');
+                    // Проверим, что класс добавился
+                    if (feedbackDiv.classList.contains('show')) {
+                        debugLog('Класс show успешно добавлен к feedbackDiv', 'info');
+                    } else {
+                        debugLog('Не удалось добавить класс show к feedbackDiv', 'error');
+                    }
+                    // Проверим display
+                    const computedStyle = window.getComputedStyle(feedbackDiv);
+                    debugLog(`Computed display: ${computedStyle.display}`, 'info');
                 } else {
                     debugLog('Не найден .option-feedback для варианта', 'error');
                 }
@@ -791,6 +759,8 @@
             }
             nextTaskButton.disabled = true;
             checkButton.onclick = retryAnswer;
+            // Лог состояния кнопки
+            debugLog(`Текст кнопки после неверного ответа: "${checkButton.textContent}"`, 'info');
         }
     }
 
@@ -822,6 +792,7 @@
         debugLog(`Задание ${currentTaskIndex+1} помечено как failed (повторная попытка)`, 'info');
         // Перерисовываем вопрос, чтобы сбросить визуальное состояние
         showTask(currentTaskIndex);
+        debugLog('retryAnswer: showTask вызван, кнопка восстановлена', 'info');
     }
 
     // ---- Переход к следующему заданию ----
