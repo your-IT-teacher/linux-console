@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.6.0';
+    const APP_VERSION = '2.7.0';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
@@ -28,7 +28,6 @@
     const joinGroupStatus = document.getElementById('joinGroupStatus');
     const appVersionSpan = document.getElementById('appVersion');
 
-    // Элементы для статей
     const articlesContainer = document.getElementById('articlesContainer');
     const articlesList = document.getElementById('articlesList');
     const articleContent = document.getElementById('articleContent');
@@ -48,6 +47,7 @@
     let progress = {};
     let isGroupMember = false;
     let currentArticleIndex = 0;
+    let articleCache = {}; // кеш для загруженных статей
 
     // ---- Логгер ----
     function debugLog(message, type = 'info') {
@@ -250,7 +250,7 @@
         alert('Прогресс курса сброшен. Вы можете начать обучение заново.');
     }
 
-    // ---- Проверка членства в группе (исправленная) ----
+    // ---- Проверка членства в группе ----
     async function checkGroupMembership() {
         if (!vkBridge || typeof vkBridge.send !== 'function') {
             joinGroupButton.disabled = true;
@@ -266,27 +266,23 @@
             let isMember = false;
             let found = false;
 
-            // 1. Верхний уровень
             if (data && typeof data.is_member !== 'undefined') {
                 found = true;
                 isMember = data.is_member === 1 || data.is_member === true || data.is_member === '1';
                 debugLog(`Нашли is_member на верхнем уровне: ${data.is_member} -> ${isMember}`, 'info');
             }
-            // 2. Внутри data.group
             if (data && data.group && typeof data.group.is_member !== 'undefined') {
                 found = true;
                 const val = data.group.is_member;
                 isMember = val === 1 || val === true || val === '1';
                 debugLog(`Нашли is_member в data.group: ${val} -> ${isMember}`, 'info');
             }
-            // 3. Если data — массив с группой
             if (Array.isArray(data) && data.length > 0 && data[0].group && typeof data[0].group.is_member !== 'undefined') {
                 found = true;
                 const val = data[0].group.is_member;
                 isMember = val === 1 || val === true || val === '1';
                 debugLog(`Нашли is_member в data[0].group: ${val} -> ${isMember}`, 'info');
             }
-            // 4. Если data — сама группа (без обёртки)
             if (data && typeof data.id !== 'undefined' && typeof data.is_member !== 'undefined') {
                 found = true;
                 isMember = data.is_member === 1 || data.is_member === true || data.is_member === '1';
@@ -367,7 +363,7 @@
         }
     }
 
-    // ---- Инициализация прогресса для урока (включая статьи и задачи) ----
+    // ---- Инициализация прогресса для урока ----
     function ensureLessonProgress(lessonId, lessonData) {
         if (!progress[lessonId]) {
             progress[lessonId] = { videos: [], articles: [], tasks: [] };
@@ -438,9 +434,30 @@
         }
         progress[lessonId].articles[articleIndex] = status;
         await saveProgressToStorage(progress);
+        // Обновляем список, но не перезагружаем содержимое (оно уже отображается)
         renderArticles(currentLesson);
     }
 
+    // ---- Загрузка содержимого статьи (кешируется) ----
+    async function loadArticleContent(article) {
+        if (articleCache[article.id]) {
+            return articleCache[article.id];
+        }
+        try {
+            const data = await loadJSON(`data/${DEFAULT_COURSE}/lessons/${currentLesson.id}/${article.file}`);
+            if (data && data.content) {
+                articleCache[article.id] = data.content;
+                return data.content;
+            } else {
+                throw new Error('Неверный формат статьи');
+            }
+        } catch (error) {
+            debugLog(`Ошибка загрузки статьи ${article.id}: ${error.message}`, 'error');
+            return '<p>Не удалось загрузить статью. Попробуйте позже.</p>';
+        }
+    }
+
+    // ---- Отрисовка списка статей (без содержимого) ----
     function renderArticles(lessonData) {
         if (!lessonData || !lessonData.articles || lessonData.articles.length === 0) {
             articlesContainer.style.display = 'none';
@@ -451,7 +468,6 @@
         const articles = lessonData.articles;
         const lessonId = lessonData.id;
 
-        // Строим список статей
         let html = '';
         articles.forEach((article, index) => {
             const status = getArticleStatus(lessonId, index);
@@ -473,7 +489,7 @@
         });
         articlesList.innerHTML = html;
 
-        // Навешиваем обработчики кликов на статьи
+        // Навешиваем обработчики кликов
         document.querySelectorAll('.article-item').forEach(el => {
             el.addEventListener('click', function() {
                 const index = parseInt(this.dataset.index);
@@ -481,47 +497,35 @@
             });
         });
 
-        // Отображаем текущую статью
-        if (currentArticleIndex < articles.length) {
-            // Если текущая статья не установлена, выбираем первую, у которой статус studying, иначе первую
-            let targetIndex = currentArticleIndex;
-            // Проверим, есть ли studying
-            let studyingIndex = -1;
-            for (let i = 0; i < articles.length; i++) {
-                if (getArticleStatus(lessonId, i) === 'studying') {
-                    studyingIndex = i;
-                    break;
-                }
+        // Определяем, какую статью показывать: если есть studying, то её, иначе первую не прочитанную, иначе последнюю
+        let targetIndex = 0;
+        let studyingIndex = -1;
+        let notStartedIndex = -1;
+        for (let i = 0; i < articles.length; i++) {
+            const status = getArticleStatus(lessonId, i);
+            if (status === 'studying') {
+                studyingIndex = i;
+                break;
             }
-            if (studyingIndex !== -1) {
-                targetIndex = studyingIndex;
-            } else {
-                // Ищем первую not_started
-                let notStartedIndex = -1;
-                for (let i = 0; i < articles.length; i++) {
-                    if (getArticleStatus(lessonId, i) === 'not_started') {
-                        notStartedIndex = i;
-                        break;
-                    }
-                }
-                if (notStartedIndex !== -1) {
-                    targetIndex = notStartedIndex;
-                } else {
-                    // все прочитаны — оставляем последнюю
-                    targetIndex = articles.length - 1;
-                }
+            if (status === 'not_started' && notStartedIndex === -1) {
+                notStartedIndex = i;
             }
-            currentArticleIndex = targetIndex;
-            openArticle(targetIndex);
-        } else {
-            currentArticleIndex = 0;
-            openArticle(0);
         }
-
-        updateNextArticleButton();
+        if (studyingIndex !== -1) {
+            targetIndex = studyingIndex;
+        } else if (notStartedIndex !== -1) {
+            targetIndex = notStartedIndex;
+        } else {
+            // все прочитаны, показываем последнюю
+            targetIndex = articles.length - 1;
+        }
+        currentArticleIndex = targetIndex;
+        // Загружаем содержимое статьи (асинхронно)
+        openArticle(targetIndex);
     }
 
-    function openArticle(index) {
+    // ---- Открытие статьи (загружает содержимое по требованию) ----
+    async function openArticle(index) {
         if (!currentLesson) return;
         const articles = currentLesson.articles;
         if (!articles || index < 0 || index >= articles.length) return;
@@ -531,14 +535,17 @@
         const lessonId = currentLesson.id;
 
         // Устанавливаем статус studying
-        setArticleStatus(lessonId, index, 'studying');
+        await setArticleStatus(lessonId, index, 'studying');
 
-        // Отображаем содержимое
-        articleContent.innerHTML = article.content;
+        // Показываем индикатор загрузки
+        articleContent.innerHTML = '<div style="text-align:center;padding:20px;">⏳ Загрузка статьи...</div>';
 
-        // Обновляем список статей (чтобы обновить иконки)
-        renderArticles(currentLesson); // вызываем повторно, чтобы обновить статусы в списке
+        // Загружаем содержимое
+        const content = await loadArticleContent(article);
+        articleContent.innerHTML = content;
 
+        // Обновляем список (чтобы обновить иконки)
+        renderArticles(currentLesson); // это вызовет перерисовку, но не загрузит содержимое заново
         updateNextArticleButton();
     }
 
@@ -568,15 +575,15 @@
         // Помечаем текущую как прочитанную
         await setArticleStatus(lessonId, currentArticleIndex, 'read');
 
-        // Переходим к следующей, если есть
+        // Переходим к следующей
         const nextIndex = currentArticleIndex + 1;
         if (nextIndex < articles.length) {
-            openArticle(nextIndex);
+            await openArticle(nextIndex);
         } else {
             // Все статьи изучены
             nextArticleButton.disabled = true;
             nextArticleButton.textContent = '✅ Все статьи изучены';
-            // Дополнительно можно показать сообщение
+            // Дополнительное сообщение
             articleContent.innerHTML += '<p style="color:green;font-weight:bold;">🎉 Поздравляем! Вы изучили все статьи этого урока.</p>';
         }
     }
@@ -693,6 +700,9 @@
             currentLesson = lessonData;
             currentLessonIndex = index;
 
+            // Сбрасываем кеш статей при открытии нового урока
+            articleCache = {};
+
             // Показываем контейнер урока
             lessonContainer.style.display = 'block';
             stepsContainer.style.display = 'none';
@@ -708,10 +718,6 @@
 
             // Статьи
             if (lessonData.articles && lessonData.articles.length > 0) {
-                // Инициализируем индекс первой статьи, если ещё не установлен
-                if (typeof currentArticleIndex === 'undefined' || currentArticleIndex === null) {
-                    currentArticleIndex = 0;
-                }
                 renderArticles(lessonData);
             } else {
                 articlesContainer.style.display = 'none';

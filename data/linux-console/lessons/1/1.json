@@ -1,0 +1,55 @@
+{
+  "id": 1,
+  "title": "🚀 Первый шаг",
+  "videos": [
+    { "id": "vid1", "title": "Видео-урок", "videoId": 456239019, "hash": "5077037f50a46f8b" }
+  ],
+  "articles": [
+    {
+      "id": "art1",
+      "title": "Легкий старт в Linux без установки: Ваш онлайн-терминал Terminux",
+      "file": "articles/art1.json"
+    },
+    {
+      "id": "art2",
+      "title": "Установка Ubuntu",
+      "file": "articles/art2.json"
+    },
+    {
+      "id": "art3",
+      "title": "Открытие терминала",
+      "file": "articles/art3.json"
+    },
+    {
+      "id": "art4",
+      "title": "Кто я и где я (whoami, pwd)",
+      "file": "articles/art4.json"
+    },
+    {
+      "id": "art5",
+      "title": "Что вокруг меня (ls)",
+      "file": "articles/art5.json"
+    },
+    {
+      "id": "art6",
+      "title": "Как перемещаться (cd)",
+      "file": "articles/art6.json"
+    },
+    {
+      "id": "art7",
+      "title": "Очистка экрана (clear, Ctrl+L)",
+      "file": "articles/art7.json"
+    },
+    {
+      "id": "art8",
+      "title": "Как получить помощь (man, --help)",
+      "file": "articles/art8.json"
+    },
+    {
+      "id": "art9",
+      "title": "История команд (history, !, стрелки)",
+      "file": "articles/art9.json"
+    }
+  ],
+  "tasks": []
+}
