@@ -1,8 +1,9 @@
 {
   "id": 10,
   "title": "🚀 Финальный, 10-й шаг",
-  "videoId": 456239029,
-  "hash": "93ca513da97c6577",
+  "videos": [
+    { "id": "vid1", "title": "Видео-урок", "videoId": 456239029, "hash": "93ca513da97c6577" }
+  ],
   "articles": [],
   "tasks": []
 }

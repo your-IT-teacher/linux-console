@@ -1,8 +1,9 @@
 {
   "id": 7,
   "title": "🚀 Седьмой шаг",
-  "videoId": 456239026,
-  "hash": "27924639f06ab09a",
+  "videos": [
+    { "id": "vid1", "title": "Видео-урок", "videoId": 456239026, "hash": "27924639f06ab09a" }
+  ],
   "articles": [],
   "tasks": []
 }

@@ -182,6 +182,68 @@ h1 {
 .hidden {
     display: none !important;
 }
+
+/* ---- Статусы уроков ---- */
+.step-button.status-studying {
+    background: #fff3e0;
+    border-color: #ffb74d;
+}
+.step-button.status-studying .step-number {
+    color: #e65100;
+}
+.step-button.status-studying .step-status {
+    color: #e65100;
+}
+
+.step-button.status-done {
+    background: #e8f5e9;
+    border-color: #81c784;
+}
+.step-button.status-done .step-number {
+    color: #2e7d32;
+}
+.step-button.status-done .step-status {
+    color: #2e7d32;
+}
+
+.step-status {
+    margin-right: 8px;
+    font-size: 16px;
+    min-width: 24px;
+    text-align: center;
+}
+
+/* ---- Кнопка "Сделано!" ---- */
+.done-button {
+    display: none;
+    margin-top: 12px;
+    margin-left: 8px;
+    background: #4caf50;
+    color: #ffffff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+.done-button:hover {
+    background: #388e3c;
+}
+.done-button:active {
+    transform: scale(0.96);
+}
+
+/* ---- Контейнер кнопок в видео-режиме ---- */
+.video-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
 @media (max-width: 420px) {
     .app {
         padding: 20px 16px;
