@@ -4,6 +4,32 @@
   "videos": [
     { "id": "vid1", "title": "Видео-урок", "videoId": 456239029, "hash": "93ca513da97c6577" }
   ],
-  "articles": [],
+  "articles": [
+    {
+      "id": "art1",
+      "title": "Создание файла скрипта",
+      "file": "articles/art1.json"
+    },
+    {
+      "id": "art2",
+      "title": "Переменные и ввод данных (read)",
+      "file": "articles/art2.json"
+    },
+    {
+      "id": "art3",
+      "title": "Условный оператор (if)",
+      "file": "articles/art3.json"
+    },
+    {
+      "id": "art4",
+      "title": "Цикл for",
+      "file": "articles/art4.json"
+    },
+    {
+      "id": "art5",
+      "title": "Права на выполнение (chmod +x) и запуск",
+      "file": "articles/art5.json"
+    }
+  ],
   "tasks": []
 }
