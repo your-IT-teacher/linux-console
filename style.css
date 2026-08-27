@@ -259,3 +259,23 @@ h1 {
         height: 280px;
     }
 }
+/* ---- Кнопка сброса ---- */
+.reset-button {
+    display: inline-block;
+    margin-top: 12px;
+    background: #ffebee;
+    color: #c62828;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 14px;
+    border: 1px solid #ef9a9a;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+.reset-button:hover {
+    background: #ffcdd2;
+}
+.reset-button:active {
+    transform: scale(0.96);
+}

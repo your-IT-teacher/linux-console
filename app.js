@@ -16,6 +16,7 @@
     const videoWrapper = document.getElementById('videoWrapper');
     const backButton = document.getElementById('backButton');
     const doneButton = document.getElementById('doneButton');
+    const resetButton = document.getElementById('resetButton');
     const debugToggle = document.getElementById('debugToggle');
     const debugInfo = document.getElementById('debugInfo');
 
@@ -190,6 +191,49 @@
 
         debugLog('Прогресс не найден, возвращаем пустой объект', 'warn');
         return {};
+    }
+
+    // ---- Сброс прогресса ----
+    async function resetProgress() {
+        const confirmed = confirm('Вы уверены, что хотите сбросить весь прогресс курса? Это действие нельзя отменить.');
+        if (!confirmed) return;
+
+        const key = getStorageKey();
+        debugLog('Сброс прогресса', 'info');
+
+        // Удаляем из VK Storage (устанавливаем пустую строку)
+        if (vkBridge && typeof vkBridge.send === 'function') {
+            try {
+                await vkBridge.send('VKWebAppStorageSet', { key, value: '' });
+                debugLog('Ключ очищен в VK Storage', 'success');
+            } catch (err) {
+                debugLog(`Ошибка очистки VK Storage: ${err.error_type}`, 'error');
+            }
+        }
+
+        // Удаляем из localStorage
+        try {
+            localStorage.removeItem(key);
+            debugLog('Ключ удалён из localStorage', 'success');
+        } catch (e) {
+            debugLog(`Ошибка удаления из localStorage: ${e.message}`, 'error');
+        }
+
+        // Очищаем локальный объект прогресса
+        progress = {};
+        // Инициализируем заново для всех уроков (без статусов)
+        if (currentCourse) {
+            for (const lesson of currentCourse.lessons) {
+                progress[lesson.id] = { videos: [], articles: [], tasks: [] };
+            }
+        }
+        // Сохраняем пустой прогресс (чтобы в хранилище была запись, но пустая)
+        await saveProgressToStorage(progress);
+
+        // Перерисовываем список
+        renderSteps();
+        debugLog('Прогресс сброшен', 'success');
+        alert('Прогресс курса сброшен. Вы можете начать обучение заново.');
     }
 
     // ---- Инициализация прогресса для урока на основе данных ----
@@ -445,7 +489,7 @@
             debugLog('Отладка включена через параметр debug=true');
         }
 
-        debugLog('Приложение загружено, версия 2.4.1');
+        debugLog('Приложение загружено, версия 2.4.2');
 
         if (vkBridge && typeof vkBridge.send === 'function') {
             try {
@@ -479,6 +523,7 @@
 
         backButton.addEventListener('click', goBack);
         doneButton.addEventListener('click', markAsDone);
+        resetButton.addEventListener('click', resetProgress);
     }
 
     function renderCourse(course) {
