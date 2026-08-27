@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.8.2';
+    const APP_VERSION = '2.8.3';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
@@ -771,9 +771,13 @@
                 nextTaskButton.disabled = false;
                 nextTaskButton.textContent = 'Завершить тестирование';
             }
+            // Убираем обработчик retry, если он был
+            checkButton.onclick = null;
         } else {
             // Неправильный ответ – показываем подсказку и меняем кнопку
             checkButton.textContent = 'Попробовать ещё раз';
+            checkButton.disabled = false;
+            // Показываем подсказку
             const feedbackDiv = document.querySelectorAll('.test-option')[selectedIndex].querySelector('.option-feedback');
             if (feedbackDiv) {
                 const feedbackText = selectedOption.feedback || 'Неверно. Попробуйте ещё раз.';
@@ -784,8 +788,9 @@
             } else {
                 debugLog('Не найден .option-feedback для варианта', 'error');
             }
+            // Блокируем кнопку "Следующее задание"
             nextTaskButton.disabled = true;
-            // Меняем обработчик на retryAnswer
+            // Назначаем обработчик для повторной попытки
             checkButton.onclick = retryAnswer;
             // Сохраняем статус failed (но только после того, как пользователь нажмёт "Попробовать ещё раз")
             // Здесь не сохраняем, чтобы дать шанс исправиться
@@ -805,8 +810,10 @@
         document.querySelectorAll('.test-option').forEach(el => {
             el.style.backgroundColor = '';
         });
+        // Сброс состояния
         isAnswerChecked = false;
         currentTaskAttempt = null;
+        // Возвращаем кнопку в исходное состояние
         checkButton.textContent = 'Проверить';
         checkButton.disabled = false;
         checkButton.onclick = checkAnswer;
@@ -815,6 +822,8 @@
         const lessonId = currentLesson.id;
         setTaskStatus(lessonId, currentTaskIndex, 'failed');
         debugLog(`Задание ${currentTaskIndex+1} помечено как failed (повторная попытка)`, 'info');
+        // Перерисовываем вопрос, чтобы сбросить визуальное состояние
+        showTask(currentTaskIndex);
     }
 
     // ---- Переход к следующему заданию ----
