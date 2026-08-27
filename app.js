@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.8.6';
+    const APP_VERSION = '2.8.6.с';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';

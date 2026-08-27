@@ -552,9 +552,9 @@ h1 {
     display: none;
 }
 
-/* ---- Подсказки в тестах ---- */
+/* ---- Гарантированное отображение подсказок ---- */
 .option-feedback.show {
-    display: block;
+    display: block !important;
 }
 
 .test-actions {
