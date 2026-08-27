@@ -42,19 +42,19 @@
 <body>
     <div class="app" id="app">
 
-        <!-- Блок пользователя (заполняется JS) -->
+        <!-- Блок пользователя -->
         <div id="userBlock" class="user-card" style="display: none;">
             <img id="userAvatar" src="" alt="аватар" />
             <span class="user-name" id="userName">Гость</span>
         </div>
 
-        <!-- Блок вступления в группу -->
+        <!-- Вступление в группу -->
         <div id="joinGroupBlock">
             <button class="join-group-button" id="joinGroupButton">📢 Вступить в группу</button>
             <p id="joinGroupStatus" class="join-status"></p>
         </div>
 
-        <!-- Заголовок курса (заполняется JS) -->
+        <!-- Заголовок курса -->
         <div id="courseHeader">
             <h1 id="courseTitle"></h1>
             <p class="description" id="courseDescription"></p>
@@ -65,20 +65,27 @@
 
         <!-- Контейнер для видео и статей -->
         <div id="lessonContainer" style="display: none;">
-            <!-- Видео -->
+            <!-- Видео (только плеер) -->
             <div id="videoContainer">
                 <div id="videoWrapper"></div>
+            </div>
+
+            <!-- Блок статей (новый порядок) -->
+            <div id="articlesContainer">
+                <!-- Содержимое статьи -->
+                <div id="articleContent" class="article-content"></div>
+
+                <!-- Кнопка "Следующая статья" -->
+                <button class="next-article-button" id="nextArticleButton">➡️ Следующая статья</button>
+
+                <!-- Кнопки "Назад к урокам" и "Сделано" (перенесены из видео) -->
                 <div class="video-actions">
                     <button class="back-button" id="backButton">← Назад к урокам</button>
                     <button class="done-button" id="doneButton">✅ Сделано! Перейти к следующему</button>
                 </div>
-            </div>
 
-            <!-- Блок статей (порядок: содержимое → кнопка → список) -->
-            <div id="articlesContainer">
+                <!-- Заголовок и список статей -->
                 <h3 class="articles-header">📚 Статьи урока</h3>
-                <div id="articleContent" class="article-content"></div>
-                <button class="next-article-button" id="nextArticleButton">➡️ Следующая статья</button>
                 <div id="articlesList" class="articles-list"></div>
             </div>
         </div>

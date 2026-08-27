@@ -235,13 +235,13 @@ h1 {
     transform: scale(0.96);
 }
 
-/* ---- Контейнер кнопок в видео-режиме ---- */
+/* --- Кнопки в блоке статей --- */
 .video-actions {
     display: flex;
     justify-content: center;
     gap: 12px;
     flex-wrap: wrap;
-    margin-top: 12px;
+    margin: 16px 0 12px 0; /* отступ сверху и снизу */
 }
 
 /* ---- Кнопка сброса прогресса ---- */
@@ -325,10 +325,11 @@ h1 {
 }
 
 .articles-header {
+    margin-top: 20px;
+    margin-bottom: 10px;
     font-size: 18px;
     font-weight: 600;
     color: #1c1c1e;
-    margin-bottom: 12px;
 }
 
 .articles-list {
