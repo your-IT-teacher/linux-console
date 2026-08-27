@@ -4,7 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Курс консоли Linux</title>
+
+    <!-- VK Bridge -->
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+
+    <!-- Подключаем стили -->
     <link rel="stylesheet" href="style.css" />
 
     <!-- Yandex.Metrika counter -->
@@ -37,10 +41,19 @@
 
 <body>
     <div class="app" id="app">
+
         <!-- Блок пользователя (заполняется JS) -->
         <div id="userBlock" class="user-card" style="display: none;">
             <img id="userAvatar" src="" alt="аватар" />
             <span class="user-name" id="userName">Гость</span>
+        </div>
+
+        <!-- Блок вступления в группу -->
+        <div id="joinGroupBlock">
+            <button class="join-group-button" id="joinGroupButton">
+                📢 Вступить в группу
+            </button>
+            <p id="joinGroupStatus" class="join-status"></p>
         </div>
 
         <!-- Заголовок курса (заполняется JS) -->
@@ -55,22 +68,25 @@
         <!-- Контейнер для видео -->
         <div id="videoContainer">
             <div id="videoWrapper"></div>
-            <button class="back-button" id="backButton">← Назад к урокам</button>
-            <button class="done-button" id="doneButton">✅ Сделано! Перейти к следующему</button>
+            <div class="video-actions">
+                <button class="back-button" id="backButton">← Назад к урокам</button>
+                <button class="done-button" id="doneButton">✅ Сделано! Перейти к следующему</button>
+            </div>
         </div>
 
         <!-- Подвал -->
         <div class="footer-note">Кликайте на шаг – видео откроется автоматически</div>
-        
-        <!-- Новая кнопка сброса -->
+
+        <!-- Кнопка сброса прогресса -->
         <button class="reset-button" id="resetButton">🔄 Начать обучение сначала</button>
 
-        <div class="version" id="debugToggle">Версия 2.4.2</div>
+        <div class="version" id="debugToggle">Версия 2.5.0</div>
 
         <!-- Панель отладки -->
         <div id="debugInfo"></div>
     </div>
 
+    <!-- Подключаем основной скрипт -->
     <script src="app.js"></script>
 </body>
 </html>

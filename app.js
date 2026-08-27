@@ -4,6 +4,7 @@
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
     const STORAGE_PREFIX = 'course_progress_';
+    const GROUP_ID = 193665099; // ID вашей группы
 
     // ---- DOM-элементы ----
     const userBlock = document.getElementById('userBlock');
@@ -19,6 +20,8 @@
     const resetButton = document.getElementById('resetButton');
     const debugToggle = document.getElementById('debugToggle');
     const debugInfo = document.getElementById('debugInfo');
+    const joinGroupButton = document.getElementById('joinGroupButton');
+    const joinGroupStatus = document.getElementById('joinGroupStatus');
 
     const vkBridge = window.vkBridge;
 
@@ -27,6 +30,7 @@
     let currentLesson = null;
     let currentLessonIndex = 0;
     let progress = {};
+    let isGroupMember = false; // статус членства в группе
 
     // ---- Логгер ----
     function debugLog(message, type = 'info') {
@@ -201,7 +205,6 @@
         const key = getStorageKey();
         debugLog('Сброс прогресса', 'info');
 
-        // Удаляем из VK Storage (устанавливаем пустую строку)
         if (vkBridge && typeof vkBridge.send === 'function') {
             try {
                 await vkBridge.send('VKWebAppStorageSet', { key, value: '' });
@@ -211,7 +214,6 @@
             }
         }
 
-        // Удаляем из localStorage
         try {
             localStorage.removeItem(key);
             debugLog('Ключ удалён из localStorage', 'success');
@@ -219,24 +221,99 @@
             debugLog(`Ошибка удаления из localStorage: ${e.message}`, 'error');
         }
 
-        // Очищаем локальный объект прогресса
         progress = {};
-        // Инициализируем заново для всех уроков (без статусов)
         if (currentCourse) {
             for (const lesson of currentCourse.lessons) {
                 progress[lesson.id] = { videos: [], articles: [], tasks: [] };
             }
         }
-        // Сохраняем пустой прогресс (чтобы в хранилище была запись, но пустая)
         await saveProgressToStorage(progress);
-
-        // Перерисовываем список
         renderSteps();
         debugLog('Прогресс сброшен', 'success');
         alert('Прогресс курса сброшен. Вы можете начать обучение заново.');
     }
 
-    // ---- Инициализация прогресса для урока на основе данных ----
+    // ---- Проверка членства в группе ----
+    async function checkGroupMembership() {
+        if (!vkBridge || typeof vkBridge.send !== 'function') {
+            joinGroupButton.disabled = true;
+            joinGroupButton.textContent = '⚠️ Недоступно';
+            joinGroupStatus.textContent = 'Функция доступна только в приложении VK.';
+            return;
+        }
+
+        try {
+            const data = await vkBridge.send('VKWebAppGetGroupInfo', { group_id: GROUP_ID });
+            debugLog(`VKWebAppGetGroupInfo ответ: ${JSON.stringify(data)}`, 'info');
+            // В ответе приходит объект с полем "is_member" (boolean)
+            if (data && typeof data.is_member !== 'undefined') {
+                isGroupMember = data.is_member;
+                if (isGroupMember) {
+                    joinGroupButton.classList.add('joined');
+                    joinGroupButton.textContent = '✅ Вы в группе!';
+                    joinGroupButton.disabled = true;
+                    joinGroupStatus.textContent = 'Спасибо, что подписались! Вы будете получать уведомления о новых вебинарах.';
+                } else {
+                    joinGroupButton.classList.remove('joined');
+                    joinGroupButton.textContent = '📢 Вступить в группу';
+                    joinGroupButton.disabled = false;
+                    joinGroupStatus.textContent = 'Подпишитесь, чтобы не пропустить новые вебинары и получить доступ к закрытому контенту.';
+                }
+            } else {
+                debugLog('Не удалось определить членство в группе', 'warn');
+                joinGroupButton.disabled = true;
+                joinGroupButton.textContent = '⚠️ Ошибка';
+                joinGroupStatus.textContent = 'Не удалось проверить подписку. Попробуйте позже.';
+            }
+        } catch (error) {
+            debugLog(`Ошибка VKWebAppGetGroupInfo: ${error.error_type || error.message}`, 'error');
+            joinGroupButton.disabled = true;
+            joinGroupButton.textContent = '⚠️ Ошибка';
+            joinGroupStatus.textContent = 'Не удалось проверить подписку. Попробуйте позже.';
+        }
+    }
+
+    // ---- Обработчик вступления в группу ----
+    async function handleJoinGroup() {
+        if (!vkBridge || typeof vkBridge.send !== 'function') {
+            joinGroupStatus.textContent = 'Функция доступна только в приложении VK.';
+            return;
+        }
+
+        if (isGroupMember) {
+            joinGroupStatus.textContent = 'Вы уже в группе!';
+            return;
+        }
+
+        joinGroupButton.disabled = true;
+        joinGroupButton.textContent = '⏳ Обработка...';
+        joinGroupStatus.textContent = '';
+
+        try {
+            const data = await vkBridge.send('VKWebAppJoinGroup', { group_id: GROUP_ID });
+            debugLog(`VKWebAppJoinGroup ответ: ${JSON.stringify(data)}`, 'info');
+            if (data && data.result) {
+                isGroupMember = true;
+                joinGroupButton.classList.add('joined');
+                joinGroupButton.textContent = '✅ Вы в группе!';
+                joinGroupButton.disabled = true;
+                joinGroupStatus.textContent = 'Спасибо! Теперь вы будете в курсе новых вебинаров и получите доступ к закрытому контенту.';
+                debugLog(`Пользователь вступил в группу ${GROUP_ID}`, 'success');
+            } else {
+                joinGroupButton.disabled = false;
+                joinGroupButton.textContent = '📢 Вступить в группу';
+                joinGroupStatus.textContent = 'Не удалось вступить в группу. Попробуйте позже.';
+                debugLog('VKWebAppJoinGroup вернул false', 'warn');
+            }
+        } catch (error) {
+            joinGroupButton.disabled = false;
+            joinGroupButton.textContent = '📢 Вступить в группу';
+            joinGroupStatus.textContent = 'Ошибка при вступлении в группу.';
+            debugLog(`Ошибка VKWebAppJoinGroup: ${error.error_type || error.message}`, 'error');
+        }
+    }
+
+    // ---- Инициализация прогресса для урока ----
     function ensureLessonProgress(lessonId, lessonData) {
         if (!progress[lessonId]) {
             progress[lessonId] = { videos: [], articles: [], tasks: [] };
@@ -270,7 +347,6 @@
         }
     }
 
-    // ---- Получение общего статуса видео для отображения в списке ----
     function getLessonVideoStatus(lessonId) {
         const p = progress[lessonId];
         if (!p || !p.videos || p.videos.length === 0) return 'not_started';
@@ -279,7 +355,6 @@
         return 'not_started';
     }
 
-    // ---- Установка статуса конкретного видео ----
     async function setVideoStatus(lessonId, videoIndex, status) {
         ensureLessonProgress(lessonId);
         if (videoIndex < 0 || videoIndex >= progress[lessonId].videos.length) {
@@ -291,7 +366,6 @@
         renderSteps();
     }
 
-    // ---- Загрузка JSON ----
     async function loadJSON(url) {
         debugLog(`Загрузка ${url}`, 'info');
         const response = await fetch(url);
@@ -301,7 +375,6 @@
         return response.json();
     }
 
-    // ---- Получение информации о пользователе ----
     async function fetchUserInfo() {
         try {
             if (!vkBridge || typeof vkBridge.send !== 'function') {
@@ -328,7 +401,6 @@
         }
     }
 
-    // ---- Отображение списка уроков ----
     function renderSteps() {
         if (!currentCourse) return;
 
@@ -383,7 +455,6 @@
         updateDoneButtonVisibility();
     }
 
-    // ---- Открытие урока ----
     async function openLesson(lesson, index) {
         try {
             if (typeof ym === 'function') {
@@ -418,7 +489,6 @@
         }
     }
 
-    // ---- Показ видео ----
     function showVideo(video) {
         const ownerId = -193665099;
         const videoId = video.videoId;
@@ -442,7 +512,6 @@
         debugLog(`Видео ${videoId} встроено`, 'success');
     }
 
-    // ---- Кнопка "Сделано! Перейти к следующему" ----
     async function markAsDone() {
         if (!currentLesson) return;
 
@@ -462,7 +531,6 @@
         }
     }
 
-    // ---- Обновление видимости кнопки "Сделано" ----
     function updateDoneButtonVisibility() {
         if (currentLesson && videoContainer.style.display === 'block') {
             doneButton.style.display = 'inline-block';
@@ -471,7 +539,6 @@
         }
     }
 
-    // ---- Возврат к списку ----
     function goBack() {
         videoContainer.style.display = 'none';
         stepsContainer.style.display = 'flex';
@@ -489,7 +556,7 @@
             debugLog('Отладка включена через параметр debug=true');
         }
 
-        debugLog('Приложение загружено, версия 2.4.2');
+        debugLog('Приложение загружено, версия 2.5.0');
 
         if (vkBridge && typeof vkBridge.send === 'function') {
             try {
@@ -503,6 +570,9 @@
         }
 
         await fetchUserInfo();
+
+        // Проверяем членство в группе
+        await checkGroupMembership();
 
         try {
             const courseData = await loadJSON(`data/${DEFAULT_COURSE}/course.json`);
@@ -524,6 +594,7 @@
         backButton.addEventListener('click', goBack);
         doneButton.addEventListener('click', markAsDone);
         resetButton.addEventListener('click', resetProgress);
+        joinGroupButton.addEventListener('click', handleJoinGroup);
     }
 
     function renderCourse(course) {

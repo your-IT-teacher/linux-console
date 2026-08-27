@@ -244,22 +244,7 @@ h1 {
     margin-top: 12px;
 }
 
-@media (max-width: 420px) {
-    .app {
-        padding: 20px 16px;
-    }
-    h1 {
-        font-size: 20px;
-    }
-    .step-button {
-        padding: 12px 14px;
-        font-size: 14px;
-    }
-    #videoContainer iframe {
-        height: 280px;
-    }
-}
-/* ---- Кнопка сброса ---- */
+/* ---- Кнопка сброса прогресса ---- */
 .reset-button {
     display: inline-block;
     margin-top: 12px;
@@ -278,4 +263,71 @@ h1 {
 }
 .reset-button:active {
     transform: scale(0.96);
+}
+
+/* ---- Блок вступления в группу ---- */
+#joinGroupBlock {
+    margin-bottom: 16px;
+}
+
+.join-group-button {
+    width: 100%;
+    padding: 12px 16px;
+    background: #2787f5;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.join-group-button:hover:not(:disabled) {
+    background: #1a6bc4;
+}
+
+.join-group-button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.join-group-button.joined {
+    background: #4caf50;
+    cursor: default;
+}
+
+.join-group-button.joined:hover {
+    background: #4caf50;
+}
+
+.join-group-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.join-status {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #5e5e66;
+    text-align: center;
+}
+
+@media (max-width: 420px) {
+    .app {
+        padding: 20px 16px;
+    }
+    h1 {
+        font-size: 20px;
+    }
+    .step-button {
+        padding: 12px 14px;
+        font-size: 14px;
+    }
+    #videoContainer iframe {
+        height: 280px;
+    }
 }
