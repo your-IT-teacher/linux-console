@@ -1,13 +1,13 @@
 (function() {
     'use strict';
 
-    // ---- Версия приложения (теперь в одном месте) ----
-    const APP_VERSION = '2.5.2';
+    // ---- Версия приложения ----
+    const APP_VERSION = '2.5.3';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
     const STORAGE_PREFIX = 'course_progress_';
-    const GROUP_ID = 193665099; // ID вашей группы
+    const GROUP_ID = 193665099;
 
     // ---- DOM-элементы ----
     const userBlock = document.getElementById('userBlock');
@@ -29,7 +29,7 @@
 
     const vkBridge = window.vkBridge;
 
-    // ---- Устанавливаем версию в HTML ----
+    // ---- Устанавливаем версию ----
     if (appVersionSpan) {
         appVersionSpan.textContent = APP_VERSION;
     }
@@ -100,7 +100,7 @@
         }
     }
 
-    // ---- Работа с хранилищем (VK Storage + localStorage fallback) ----
+    // ---- Работа с хранилищем ----
     function getStorageKey() {
         return STORAGE_PREFIX + DEFAULT_COURSE;
     }
@@ -242,7 +242,7 @@
         alert('Прогресс курса сброшен. Вы можете начать обучение заново.');
     }
 
-    // ---- Проверка членства в группе (исправленная) ----
+    // ---- Проверка членства в группе (расширенный debug) ----
     async function checkGroupMembership() {
         if (!vkBridge || typeof vkBridge.send !== 'function') {
             joinGroupButton.disabled = true;
@@ -253,15 +253,46 @@
 
         try {
             const data = await vkBridge.send('VKWebAppGetGroupInfo', { group_id: GROUP_ID });
-            debugLog(`VKWebAppGetGroupInfo ответ: ${JSON.stringify(data)}`, 'info');
+            debugLog(`VKWebAppGetGroupInfo ответ (сырой): ${JSON.stringify(data)}`, 'info');
 
-            // Правильный парсинг: is_member находится внутри group
             let isMember = false;
+            let found = false;
+
+            // 1. Верхний уровень
+            if (data && typeof data.is_member !== 'undefined') {
+                found = true;
+                isMember = data.is_member === 1 || data.is_member === true || data.is_member === '1';
+                debugLog(`Нашли is_member на верхнем уровне: ${data.is_member} -> ${isMember}`, 'info');
+            }
+            // 2. Внутри data.group
             if (data && data.group && typeof data.group.is_member !== 'undefined') {
-                isMember = data.group.is_member === 1 || data.group.is_member === true;
-            } else if (data && typeof data.is_member !== 'undefined') {
-                // fallback для других версий API
-                isMember = data.is_member === 1 || data.is_member === true;
+                found = true;
+                const val = data.group.is_member;
+                isMember = val === 1 || val === true || val === '1';
+                debugLog(`Нашли is_member в data.group: ${val} -> ${isMember}`, 'info');
+            }
+            // 3. Если data — массив с группой
+            if (Array.isArray(data) && data.length > 0 && data[0].group && typeof data[0].group.is_member !== 'undefined') {
+                found = true;
+                const val = data[0].group.is_member;
+                isMember = val === 1 || val === true || val === '1';
+                debugLog(`Нашли is_member в data[0].group: ${val} -> ${isMember}`, 'info');
+            }
+            // 4. Если data — сама группа (без обёртки)
+            if (data && typeof data.id !== 'undefined' && typeof data.is_member !== 'undefined') {
+                found = true;
+                isMember = data.is_member === 1 || data.is_member === true || data.is_member === '1';
+                debugLog(`Нашли is_member в самом объекте (без обёртки): ${data.is_member} -> ${isMember}`, 'info');
+            }
+
+            if (!found) {
+                debugLog('Не удалось найти поле is_member ни в одном из вариантов. Структура data:', 'warn');
+                if (data && typeof data === 'object') {
+                    debugLog(`Ключи data: ${Object.keys(data).join(', ')}`, 'warn');
+                    if (data.group) {
+                        debugLog(`Ключи data.group: ${Object.keys(data.group).join(', ')}`, 'warn');
+                    }
+                }
             }
 
             isGroupMember = isMember;
@@ -277,10 +308,11 @@
                 joinGroupButton.textContent = '📢 Вступить в группу';
                 joinGroupButton.disabled = false;
                 joinGroupStatus.textContent = 'Подпишитесь, чтобы не пропустить новые вебинары и получить доступ к закрытому контенту.';
-                debugLog('Пользователь не состоит в группе', 'info');
+                debugLog('Пользователь не состоит в группе или не удалось определить', 'info');
             }
         } catch (error) {
             debugLog(`Ошибка VKWebAppGetGroupInfo: ${error.error_type || error.message}`, 'error');
+            debugLog(`Детали ошибки: ${JSON.stringify(error)}`, 'error');
             joinGroupButton.disabled = true;
             joinGroupButton.textContent = '⚠️ Ошибка';
             joinGroupStatus.textContent = 'Не удалось проверить подписку. Попробуйте позже.';
