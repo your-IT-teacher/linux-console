@@ -1,8 +1,327 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f2f3f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+}
+.app {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 32px 24px;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+}
+.user-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f8f9fa;
+    padding: 10px 16px;
+    border-radius: 40px;
+    margin-bottom: 24px;
+    border: 1px solid #e9ebf0;
+    justify-content: flex-start;
+}
+.user-card img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+}
+.user-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: #1c1c1e;
+}
+h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1c1c1e;
+    margin-bottom: 8px;
+}
+.description {
+    font-size: 16px;
+    color: #5e5e66;
+    margin-bottom: 20px;
+    line-height: 1.4;
+}
+.steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 16px 0;
+}
+.step-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: #f8f9fa;
+    border: 1px solid #e9ebf0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    text-align: left;
+    font-size: 15px;
+    font-weight: 500;
+    color: #1c1c1e;
+    -webkit-tap-highlight-color: transparent;
+}
+.step-button:hover {
+    background: #edf0f5;
+    border-color: #cbd2db;
+}
+.step-button:active {
+    transform: scale(0.98);
+    background: #e1e6ee;
+}
+.step-number {
+    display: inline-block;
+    min-width: 30px;
+    font-weight: 600;
+    color: #4a76a8;
+    margin-right: 12px;
+}
+.step-title {
+    flex: 1;
+    margin-right: 12px;
+}
+.step-arrow {
+    color: #8e8e93;
+    font-size: 18px;
+}
+.footer-note {
+    margin-top: 16px;
+    font-size: 13px;
+    color: #8e8e93;
+}
+.version {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #b0b0b8;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    text-decoration: underline dotted;
+}
+#debugInfo {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f0f2f5;
+    border-radius: 8px;
+    text-align: left;
+    font-size: 13px;
+    color: #1c1c1e;
+    border: 1px dashed #b0b0b8;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+}
+#debugInfo.show {
+    display: block;
+}
+.debug-entry {
+    margin: 4px 0;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+}
+.debug-entry.error {
+    color: #d32f2f;
+}
+.debug-entry.success {
+    color: #2e7d32;
+}
+.debug-entry.info {
+    color: #0d47a1;
+}
+.debug-entry.warn {
+    color: #f57f17;
+}
+#videoContainer {
+    margin-top: 20px;
+    display: none;
+    position: relative;
+}
+#videoContainer iframe {
+    width: 100%;
+    height: 400px;
+    border-radius: 12px;
+    border: none;
+}
+.back-button {
+    display: inline-block;
+    margin-top: 12px;
+    background: #e9ebf0;
+    color: #1c1c1e;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.back-button:hover {
+    background: #d5d8e0;
+}
+.back-button:active {
+    transform: scale(0.96);
+}
+.hidden {
+    display: none !important;
+}
+
+/* ---- Статусы уроков ---- */
+.step-button.status-studying {
+    background: #fff3e0;
+    border-color: #ffb74d;
+}
+.step-button.status-studying .step-number {
+    color: #e65100;
+}
+.step-button.status-studying .step-status {
+    color: #e65100;
+}
+
+.step-button.status-done {
+    background: #e8f5e9;
+    border-color: #81c784;
+}
+.step-button.status-done .step-number {
+    color: #2e7d32;
+}
+.step-button.status-done .step-status {
+    color: #2e7d32;
+}
+
+.step-status {
+    margin-right: 8px;
+    font-size: 16px;
+    min-width: 24px;
+    text-align: center;
+}
+
+/* ---- Кнопка "Сделано!" ---- */
+.done-button {
+    display: none;
+    margin-top: 12px;
+    margin-left: 8px;
+    background: #4caf50;
+    color: #ffffff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+.done-button:hover {
+    background: #388e3c;
+}
+.done-button:active {
+    transform: scale(0.96);
+}
+
+/* ---- Контейнер кнопок в видео-режиме ---- */
+.video-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+/* ---- Кнопка сброса прогресса ---- */
+.reset-button {
+    display: inline-block;
+    margin-top: 12px;
+    background: #ffebee;
+    color: #c62828;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 14px;
+    border: 1px solid #ef9a9a;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+.reset-button:hover {
+    background: #ffcdd2;
+}
+.reset-button:active {
+    transform: scale(0.96);
+}
+
+/* ---- Блок вступления в группу ---- */
+#joinGroupBlock {
+    margin-bottom: 16px;
+}
+
+.join-group-button {
+    width: 100%;
+    padding: 12px 16px;
+    background: #2787f5;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.join-group-button:hover:not(:disabled) {
+    background: #1a6bc4;
+}
+
+.join-group-button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.join-group-button.joined {
+    background: #4caf50;
+    cursor: default;
+}
+
+.join-group-button.joined:hover {
+    background: #4caf50;
+}
+
+.join-group-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.join-status {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #5e5e66;
+    text-align: center;
+}
+
 /* ---- Блок статей ---- */
 #articlesContainer {
     margin-top: 20px;
     border-top: 1px solid #e9ebf0;
     padding-top: 16px;
+    display: none;
 }
 
 .articles-header {
@@ -81,11 +400,13 @@
     font-size: 15px;
     line-height: 1.6;
     color: #1c1c1e;
+    text-align: left;
 }
 
 .article-content h2 {
     font-size: 20px;
     margin-bottom: 12px;
+    margin-top: 0;
 }
 .article-content h3 {
     font-size: 17px;
@@ -102,6 +423,8 @@
     font-size: 14px;
     overflow-x: auto;
     margin: 10px 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 .article-content ul, .article-content ol {
     margin: 8px 0 8px 20px;
@@ -125,9 +448,16 @@
 .article-content th {
     background: #f0f2f5;
 }
+.article-content a {
+    color: #2787f5;
+    text-decoration: none;
+}
+.article-content a:hover {
+    text-decoration: underline;
+}
 
 .next-article-button {
-    display: inline-block;
+    display: none;
     margin-top: 8px;
     background: #4caf50;
     color: #ffffff;
@@ -139,13 +469,39 @@
     cursor: pointer;
     transition: background 0.2s, transform 0.1s;
 }
-.next-article-button:hover {
+.next-article-button:hover:not(:disabled) {
     background: #388e3c;
 }
-.next-article-button:active {
+.next-article-button:active:not(:disabled) {
     transform: scale(0.96);
 }
 .next-article-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* ---- Контейнер урока ---- */
+#lessonContainer {
+    display: none;
+}
+
+@media (max-width: 420px) {
+    .app {
+        padding: 20px 16px;
+    }
+    h1 {
+        font-size: 20px;
+    }
+    .step-button {
+        padding: 12px 14px;
+        font-size: 14px;
+    }
+    #videoContainer iframe {
+        height: 280px;
+    }
+    .article-content {
+        max-height: 300px;
+        font-size: 14px;
+        padding: 12px;
+    }
 }
