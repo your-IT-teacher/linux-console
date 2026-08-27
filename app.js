@@ -1,6 +1,9 @@
 (function() {
     'use strict';
 
+    // ---- Версия приложения (теперь в одном месте) ----
+    const APP_VERSION = '2.5.2';
+
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
     const STORAGE_PREFIX = 'course_progress_';
@@ -22,8 +25,14 @@
     const debugInfo = document.getElementById('debugInfo');
     const joinGroupButton = document.getElementById('joinGroupButton');
     const joinGroupStatus = document.getElementById('joinGroupStatus');
+    const appVersionSpan = document.getElementById('appVersion');
 
     const vkBridge = window.vkBridge;
+
+    // ---- Устанавливаем версию в HTML ----
+    if (appVersionSpan) {
+        appVersionSpan.textContent = APP_VERSION;
+    }
 
     // ---- Состояние ----
     let currentCourse = null;
@@ -561,7 +570,7 @@
             debugLog('Отладка включена через параметр debug=true');
         }
 
-        debugLog('Приложение загружено, версия 2.5.1');
+        debugLog(`Приложение загружено, версия ${APP_VERSION}`);
 
         if (vkBridge && typeof vkBridge.send === 'function') {
             try {
