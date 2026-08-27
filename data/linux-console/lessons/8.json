@@ -4,6 +4,32 @@
   "videos": [
     { "id": "vid1", "title": "Видео-урок", "videoId": 456239027, "hash": "a2d68ad6279b5380" }
   ],
-  "articles": [],
+  "articles": [
+    {
+      "id": "art1",
+      "title": "Обновление списка пакетов (sudo apt update)",
+      "file": "articles/art1.json"
+    },
+    {
+      "id": "art2",
+      "title": "Установка пакетов (sudo apt install)",
+      "file": "articles/art2.json"
+    },
+    {
+      "id": "art3",
+      "title": "Поиск пакетов (apt search)",
+      "file": "articles/art3.json"
+    },
+    {
+      "id": "art4",
+      "title": "Удаление пакетов (sudo apt remove)",
+      "file": "articles/art4.json"
+    },
+    {
+      "id": "art5",
+      "title": "Обновление системы (sudo apt upgrade)",
+      "file": "articles/art5.json"
+    }
+  ],
   "tasks": []
 }
