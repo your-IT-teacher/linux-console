@@ -4,6 +4,22 @@
   "videos": [
     { "id": "vid1", "title": "Видео-урок", "videoId": 456239026, "hash": "27924639f06ab09a" }
   ],
-  "articles": [],
+  "articles": [
+    {
+      "id": "art1",
+      "title": "Просмотр процессов (ps, top, atop)",
+      "file": "articles/art1.json"
+    },
+    {
+      "id": "art2",
+      "title": "Управление задачами (jobs, bg, fg)",
+      "file": "articles/art2.json"
+    },
+    {
+      "id": "art3",
+      "title": "Завершение процессов (kill, pkill, Ctrl+C)",
+      "file": "articles/art3.json"
+    }
+  ],
   "tasks": []
 }
