@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.8.0';
+    const APP_VERSION = '2.8.1';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
@@ -44,7 +44,7 @@
     const nextTaskButton = document.getElementById('nextTaskButton');
     const startTestButton = document.getElementById('startTestButton');
 
-    // Дубли кнопок для статей и тестов (чтобы не переопределять id)
+    // Дубли кнопок
     const backButton2 = document.getElementById('backButton2');
     const doneButton2 = document.getElementById('doneButton2');
     const backButton3 = document.getElementById('backButton3');
@@ -67,11 +67,11 @@
     let articleCache = {};
 
     // Состояние тестирования
-    let tasks = [];
+    let tasksMeta = [];          // массив метаданных заданий (id, file)
+    let tasksData = [];          // массив загруженных данных заданий (null, если не загружено)
     let currentTaskIndex = 0;
-    let taskStatuses = []; // статусы для текущего урока: 'not_started', 'passed', 'failed'
-    let currentTaskAttempt = null; // для хранения выбранного ответа при проверке
-    let isAnswerChecked = false; // проверен ли текущий вопрос
+    let currentTaskAttempt = null;
+    let isAnswerChecked = false;
 
     // ---- Логгер ----
     function debugLog(message, type = 'info') {
@@ -605,41 +605,45 @@
         renderTasksProgress();
     }
 
-    // ---- Загрузка заданий ----
+    // ---- Загрузка заданий (только метаданные, без содержимого) ----
     async function loadTasks(lessonData) {
         if (!lessonData || !lessonData.tasks || lessonData.tasks.length === 0) {
             startTestButton.style.display = 'none';
             return;
         }
         startTestButton.style.display = 'inline-block';
-        // Загружаем все задания сразу (можно и по требованию, но для 8 вопросов это нормально)
-        const loadedTasks = [];
-        for (const taskMeta of lessonData.tasks) {
-            try {
-                const data = await loadJSON(`data/${DEFAULT_COURSE}/lessons/${lessonData.id}/${taskMeta.file}`);
-                loadedTasks.push(data);
-            } catch (error) {
-                debugLog(`Ошибка загрузки задания ${taskMeta.id}: ${error.message}`, 'error');
-                loadedTasks.push(null);
-            }
-        }
-        tasks = loadedTasks;
-        // Инициализируем статусы, если их нет
+        // Сохраняем метаданные, но не загружаем содержимое
+        tasksMeta = lessonData.tasks;
+        tasksData = new Array(tasksMeta.length).fill(null); // кеш для данных
         const lessonId = lessonData.id;
         ensureLessonProgress(lessonId, lessonData);
-        // Обновляем отображение прогресса теста
         renderTasksProgress();
-        // Если есть не пройденные задания, выбираем первое
         currentTaskIndex = 0;
         isAnswerChecked = false;
-        // Но не открываем тест сразу, ждём нажатия кнопки
+    }
+
+    // ---- Загрузка конкретного задания по индексу ----
+    async function loadTaskContent(index) {
+        if (tasksData[index] !== null) {
+            return tasksData[index];
+        }
+        const meta = tasksMeta[index];
+        if (!meta) return null;
+        try {
+            const data = await loadJSON(`data/${DEFAULT_COURSE}/lessons/${currentLesson.id}/${meta.file}`);
+            tasksData[index] = data;
+            return data;
+        } catch (error) {
+            debugLog(`Ошибка загрузки задания ${meta.id}: ${error.message}`, 'error');
+            return null;
+        }
     }
 
     function renderTasksProgress() {
-        if (!currentLesson || !tasks || tasks.length === 0) return;
+        if (!currentLesson || !tasksMeta || tasksMeta.length === 0) return;
         const lessonId = currentLesson.id;
         let html = '';
-        tasks.forEach((task, index) => {
+        tasksMeta.forEach((meta, index) => {
             const status = getTaskStatus(lessonId, index);
             let icon = '⬜';
             if (status === 'passed') icon = '✅';
@@ -647,11 +651,10 @@
             html += `<span class="task-progress-item" data-index="${index}">${icon}</span>`;
         });
         testProgress.innerHTML = html;
-        // Навешиваем клики для перехода к заданию по иконке (опционально)
         document.querySelectorAll('.task-progress-item').forEach(el => {
             el.addEventListener('click', function() {
                 const idx = parseInt(this.dataset.index);
-                if (idx >= 0 && idx < tasks.length) {
+                if (idx >= 0 && idx < tasksMeta.length) {
                     currentTaskIndex = idx;
                     showTask(idx);
                 }
@@ -659,15 +662,15 @@
         });
     }
 
-    function showTask(index) {
-        if (!tasks || index < 0 || index >= tasks.length) return;
-        const taskData = tasks[index];
+    async function showTask(index) {
+        if (!tasksMeta || index < 0 || index >= tasksMeta.length) return;
+        // Загружаем данные, если ещё не загружены
+        let taskData = await loadTaskContent(index);
         if (!taskData) {
             testQuestion.innerHTML = '<p>Не удалось загрузить задание.</p>';
             return;
         }
 
-        // Извлекаем вопрос и варианты
         const block = taskData.block;
         const questionHTML = block.text || '<p>Вопрос не найден.</p>';
         const options = block.source.options || [];
@@ -688,11 +691,9 @@
         });
         testOptions.innerHTML = optionsHTML;
 
-        // Сбрасываем состояние кнопки
         if (isAnswerChecked) {
             checkButton.textContent = 'Проверено ✓';
             checkButton.disabled = true;
-            // Показываем подсказки для выбранного варианта, если были
             if (currentTaskAttempt !== null) {
                 const selectedOption = options[currentTaskAttempt];
                 if (selectedOption && !selectedOption.is_correct) {
@@ -703,7 +704,6 @@
                         feedbackDiv.style.color = 'red';
                     }
                 } else if (selectedOption && selectedOption.is_correct) {
-                    // Если правильно, подсветка зелёным
                     const optionDiv = document.querySelectorAll('.test-option')[currentTaskAttempt];
                     if (optionDiv) {
                         optionDiv.style.backgroundColor = '#d4edda';
@@ -713,24 +713,20 @@
         } else {
             checkButton.textContent = 'Проверить';
             checkButton.disabled = false;
-            // Скрываем подсказки
             document.querySelectorAll('.option-feedback').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.test-option').forEach(el => el.style.backgroundColor = '');
         }
 
-        // Обновляем кнопку "Следующее задание"
         const nextIndex = index + 1;
-        if (nextIndex < tasks.length) {
-            nextTaskButton.textContent = `Следующее задание → (${nextIndex+1}/${tasks.length})`;
+        if (nextIndex < tasksMeta.length) {
+            nextTaskButton.textContent = `Следующее задание → (${nextIndex+1}/${tasksMeta.length})`;
             nextTaskButton.disabled = !isAnswerChecked;
         } else {
             nextTaskButton.textContent = 'Завершить тестирование';
             nextTaskButton.disabled = !isAnswerChecked;
         }
 
-        // Обновляем прогресс
         renderTasksProgress();
-        // Прокручиваем к началу теста
         testContainer.scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -743,7 +739,7 @@
             return;
         }
         const selectedIndex = parseInt(selectedRadio.value);
-        const taskData = tasks[currentTaskIndex];
+        const taskData = tasksData[currentTaskIndex];
         if (!taskData) return;
         const options = taskData.block.source.options;
         const selectedOption = options[selectedIndex];
@@ -751,49 +747,37 @@
 
         currentTaskAttempt = selectedIndex;
 
-        // Отключаем радиокнопки
         document.querySelectorAll('input[name="task"]').forEach(el => el.disabled = true);
 
         if (isCorrect) {
-            // Правильно
             checkButton.textContent = '✅ Правильно!';
             checkButton.disabled = true;
-            // Подсветка зелёным
             const optionDiv = document.querySelectorAll('.test-option')[selectedIndex];
             if (optionDiv) optionDiv.style.backgroundColor = '#d4edda';
-            // Сохраняем статус passed
             const lessonId = currentLesson.id;
             setTaskStatus(lessonId, currentTaskIndex, 'passed');
             isAnswerChecked = true;
-            // Активируем кнопку "Следующее задание"
             const nextIndex = currentTaskIndex + 1;
-            if (nextIndex < tasks.length) {
+            if (nextIndex < tasksMeta.length) {
                 nextTaskButton.disabled = false;
             } else {
                 nextTaskButton.disabled = false;
                 nextTaskButton.textContent = 'Завершить тестирование';
             }
         } else {
-            // Неправильно
             checkButton.textContent = 'Попробовать ещё раз';
-            // Показываем подсказку
             const feedbackDiv = document.querySelectorAll('.test-option')[selectedIndex].querySelector('.option-feedback');
             if (feedbackDiv) {
                 feedbackDiv.textContent = selectedOption.feedback || 'Неверно. Попробуйте ещё раз.';
                 feedbackDiv.style.display = 'block';
                 feedbackDiv.style.color = 'red';
             }
-            // Сохраняем статус failed (но он может измениться при повторной попытке)
-            // Пока не сохраняем, чтобы дать пользователю исправиться
-            // Отключаем кнопку "Следующее задание" до правильного ответа
             nextTaskButton.disabled = true;
-            // Даём возможность попробовать снова: кнопка "Попробовать ещё раз" будет сбрасывать выделение
             checkButton.onclick = retryAnswer;
         }
     }
 
     function retryAnswer() {
-        // Сброс: снимаем выделение, убираем подсказки, разблокируем радиокнопки
         document.querySelectorAll('input[name="task"]').forEach(el => {
             el.checked = false;
             el.disabled = false;
@@ -811,7 +795,6 @@
         checkButton.disabled = false;
         checkButton.onclick = checkAnswer;
         nextTaskButton.disabled = true;
-        // Сохраняем статус failed (если пользователь уже ошибся и пробует снова, считаем что failed)
         const lessonId = currentLesson.id;
         setTaskStatus(lessonId, currentTaskIndex, 'failed');
     }
@@ -819,35 +802,30 @@
     // ---- Переход к следующему заданию ----
     function nextTask() {
         const nextIndex = currentTaskIndex + 1;
-        if (nextIndex < tasks.length) {
+        if (nextIndex < tasksMeta.length) {
             currentTaskIndex = nextIndex;
             isAnswerChecked = false;
             currentTaskAttempt = null;
             checkButton.onclick = checkAnswer;
             showTask(nextIndex);
         } else {
-            // Все задания пройдены
             alert('🎉 Поздравляем! Вы завершили все задания этого урока.');
-            // Возвращаемся к видео/статьям
             hideTest();
-            // Можно также отметить урок как завершённый? Нет, только видео и статьи.
         }
     }
 
     // ---- Показать/скрыть тест ----
     function startTest() {
-        if (!currentLesson || !tasks || tasks.length === 0) {
+        if (!currentLesson || !tasksMeta || tasksMeta.length === 0) {
             alert('В этом уроке пока нет заданий.');
             return;
         }
-        // Скрываем видео и статьи, показываем тест
         videoContainer.style.display = 'none';
         articlesContainer.style.display = 'none';
         testContainer.style.display = 'block';
-        // Находим первое не пройденное задание
         const lessonId = currentLesson.id;
         let firstNotPassed = 0;
-        for (let i = 0; i < tasks.length; i++) {
+        for (let i = 0; i < tasksMeta.length; i++) {
             const status = getTaskStatus(lessonId, i);
             if (status !== 'passed') {
                 firstNotPassed = i;
@@ -859,24 +837,20 @@
         currentTaskAttempt = null;
         checkButton.onclick = checkAnswer;
         showTask(currentTaskIndex);
-        // Скрываем кнопку "Пройти тестирование" (она видна только в видео-режиме)
         startTestButton.style.display = 'none';
     }
 
     function hideTest() {
         testContainer.style.display = 'none';
-        // Показываем видео и статьи, если они есть
         if (currentLesson && currentLesson.videos && currentLesson.videos.length > 0) {
             videoContainer.style.display = 'block';
         }
         if (currentLesson && currentLesson.articles && currentLesson.articles.length > 0) {
             articlesContainer.style.display = 'block';
         }
-        // Показываем кнопку "Пройти тестирование", если есть задания
         if (currentLesson && currentLesson.tasks && currentLesson.tasks.length > 0) {
             startTestButton.style.display = 'inline-block';
         }
-        // Обновляем статус, если нужно
         renderTasksProgress();
     }
 
@@ -1002,10 +976,8 @@
             lessonContainer.style.display = 'block';
             stepsContainer.style.display = 'none';
 
-            // Загружаем задания
             await loadTasks(lessonData);
 
-            // Видео
             if (lessonData.videos && lessonData.videos.length > 0) {
                 videoContainer.style.display = 'block';
                 await setVideoStatus(lesson.id, 0, 'studying');
@@ -1014,14 +986,12 @@
                 videoContainer.style.display = 'none';
             }
 
-            // Статьи
             if (lessonData.articles && lessonData.articles.length > 0) {
                 renderArticles(lessonData, false);
             } else {
                 articlesContainer.style.display = 'none';
             }
 
-            // Скрываем тест, если он был показан
             testContainer.style.display = 'none';
             startTestButton.style.display = 'inline-block';
 
@@ -1069,7 +1039,6 @@
             }
         }
 
-        // Проверяем, все ли задания пройдены (если есть)
         if (currentLesson.tasks && currentLesson.tasks.length > 0) {
             const allPassed = progress[lessonId].tasks.every(s => s === 'passed');
             if (!allPassed) {
