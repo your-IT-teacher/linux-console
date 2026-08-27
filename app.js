@@ -132,10 +132,15 @@
             try {
                 const data = await vkBridge.send('VKWebAppStorageGet', { keys: [key] });
                 debugLog(`Результат проверки VK Storage для ключа ${key}: ${JSON.stringify(data)}`, 'info');
-                if (data && data.keys && data.keys[key]) {
-                    debugLog(`Значение в VK Storage: ${data.keys[key]}`, 'success');
+                if (data && data.keys && Array.isArray(data.keys)) {
+                    const found = data.keys.find(item => item.key === key);
+                    if (found && found.value) {
+                        debugLog(`Значение в VK Storage: ${found.value}`, 'success');
+                    } else {
+                        debugLog('В VK Storage нет данных по ключу (после сохранения!)', 'warn');
+                    }
                 } else {
-                    debugLog('В VK Storage нет данных по ключу (после сохранения!)', 'warn');
+                    debugLog('Неожиданный формат ответа при проверке', 'warn');
                 }
             } catch (err) {
                 debugLog(`Ошибка проверки VK Storage: ${err.error_type}`, 'error');
@@ -151,12 +156,17 @@
             try {
                 const data = await vkBridge.send('VKWebAppStorageGet', { keys: [key] });
                 debugLog(`Ответ VK Storage Get: ${JSON.stringify(data)}`, 'info');
-                if (data && data.keys && data.keys[key]) {
-                    const parsed = JSON.parse(data.keys[key]);
-                    debugLog(`Прогресс загружен из VK Storage: ${JSON.stringify(parsed)}`, 'success');
-                    return parsed;
+                if (data && data.keys && Array.isArray(data.keys)) {
+                    const found = data.keys.find(item => item.key === key);
+                    if (found && found.value) {
+                        const parsed = JSON.parse(found.value);
+                        debugLog(`Прогресс загружен из VK Storage: ${JSON.stringify(parsed)}`, 'success');
+                        return parsed;
+                    } else {
+                        debugLog('В VK Storage нет данных по ключу', 'warn');
+                    }
                 } else {
-                    debugLog('В VK Storage нет данных по ключу', 'warn');
+                    debugLog('Неожиданный формат ответа VK Storage', 'warn');
                 }
             } catch (err) {
                 debugLog(`Ошибка загрузки из VK Storage: ${err.error_type}`, 'error');
@@ -435,7 +445,7 @@
             debugLog('Отладка включена через параметр debug=true');
         }
 
-        debugLog('Приложение загружено, версия 2.4.0');
+        debugLog('Приложение загружено, версия 2.4.1');
 
         if (vkBridge && typeof vkBridge.send === 'function') {
             try {
