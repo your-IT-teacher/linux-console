@@ -25,7 +25,7 @@
     let currentCourse = null;
     let currentLesson = null;
     let currentLessonIndex = 0;
-    let progress = {}; // { lessonId: { videos: [...], articles: [...], tasks: [...] } }
+    let progress = {};
 
     // ---- Логгер ----
     function debugLog(message, type = 'info') {
@@ -86,7 +86,7 @@
         }
     }
 
-    // ---- Работа с хранилищем ----
+    // ---- Работа с хранилищем (VK Storage + localStorage fallback) ----
     function getStorageKey() {
         return STORAGE_PREFIX + DEFAULT_COURSE;
     }
@@ -94,58 +94,91 @@
     async function saveProgressToStorage(progressData) {
         const key = getStorageKey();
         const value = JSON.stringify(progressData);
-        debugLog(`Сохранение прогресса: ${key}`, 'info');
+        debugLog(`Сохранение прогресса: ключ = ${key}`, 'info');
+        debugLog(`Данные для сохранения: ${value}`, 'info');
 
         if (vkBridge && typeof vkBridge.send === 'function') {
             try {
-                await vkBridge.send('VKWebAppStorageSet', { key, value });
+                const response = await vkBridge.send('VKWebAppStorageSet', { key, value });
+                debugLog(`Ответ VK Storage Set: ${JSON.stringify(response)}`, 'info');
                 debugLog('Прогресс сохранён в VK Storage', 'success');
+                await checkStorageValue(key);
             } catch (err) {
-                debugLog(`Ошибка VK Storage: ${err.error_type}`, 'error');
+                debugLog(`Ошибка сохранения в VK Storage: ${err.error_type}`, 'error');
+                debugLog(`Детали: ${JSON.stringify(err)}`, 'error');
                 try {
                     localStorage.setItem(key, value);
-                    debugLog('Сохранено в localStorage (fallback)', 'warn');
+                    debugLog('Прогресс сохранён в localStorage (fallback)', 'warn');
+                    const saved = localStorage.getItem(key);
+                    debugLog(`Проверка localStorage: ${saved}`, 'info');
                 } catch (e) {
-                    debugLog(`Ошибка localStorage: ${e.message}`, 'error');
+                    debugLog(`Ошибка сохранения в localStorage: ${e.message}`, 'error');
                 }
             }
         } else {
             try {
                 localStorage.setItem(key, value);
-                debugLog('Сохранено в localStorage', 'warn');
+                debugLog('Прогресс сохранён в localStorage', 'warn');
+                const saved = localStorage.getItem(key);
+                debugLog(`Проверка localStorage: ${saved}`, 'info');
             } catch (e) {
-                debugLog(`Ошибка localStorage: ${e.message}`, 'error');
+                debugLog(`Ошибка сохранения в localStorage: ${e.message}`, 'error');
+            }
+        }
+    }
+
+    async function checkStorageValue(key) {
+        if (vkBridge && typeof vkBridge.send === 'function') {
+            try {
+                const data = await vkBridge.send('VKWebAppStorageGet', { keys: [key] });
+                debugLog(`Результат проверки VK Storage для ключа ${key}: ${JSON.stringify(data)}`, 'info');
+                if (data && data.keys && data.keys[key]) {
+                    debugLog(`Значение в VK Storage: ${data.keys[key]}`, 'success');
+                } else {
+                    debugLog('В VK Storage нет данных по ключу (после сохранения!)', 'warn');
+                }
+            } catch (err) {
+                debugLog(`Ошибка проверки VK Storage: ${err.error_type}`, 'error');
             }
         }
     }
 
     async function loadProgressFromStorage() {
         const key = getStorageKey();
-        debugLog(`Загрузка прогресса: ${key}`, 'info');
+        debugLog(`Загрузка прогресса: ключ = ${key}`, 'info');
 
         if (vkBridge && typeof vkBridge.send === 'function') {
             try {
                 const data = await vkBridge.send('VKWebAppStorageGet', { keys: [key] });
+                debugLog(`Ответ VK Storage Get: ${JSON.stringify(data)}`, 'info');
                 if (data && data.keys && data.keys[key]) {
                     const parsed = JSON.parse(data.keys[key]);
-                    debugLog('Прогресс загружен из VK Storage', 'success');
+                    debugLog(`Прогресс загружен из VK Storage: ${JSON.stringify(parsed)}`, 'success');
                     return parsed;
+                } else {
+                    debugLog('В VK Storage нет данных по ключу', 'warn');
                 }
             } catch (err) {
-                debugLog(`Ошибка загрузки VK Storage: ${err.error_type}`, 'error');
+                debugLog(`Ошибка загрузки из VK Storage: ${err.error_type}`, 'error');
+                debugLog(`Детали: ${JSON.stringify(err)}`, 'error');
             }
         }
 
         try {
             const localData = localStorage.getItem(key);
+            debugLog(`Проверка localStorage: ${localData}`, 'info');
             if (localData) {
                 const parsed = JSON.parse(localData);
-                debugLog('Прогресс загружен из localStorage (fallback)', 'warn');
+                debugLog(`Прогресс загружен из localStorage (fallback): ${JSON.stringify(parsed)}`, 'warn');
                 return parsed;
+            } else {
+                debugLog('В localStorage нет данных по ключу', 'warn');
             }
         } catch (e) {
-            debugLog(`Ошибка загрузки localStorage: ${e.message}`, 'error');
+            debugLog(`Ошибка загрузки из localStorage: ${e.message}`, 'error');
         }
+
+        debugLog('Прогресс не найден, возвращаем пустой объект', 'warn');
         return {};
     }
 
@@ -154,7 +187,6 @@
         if (!progress[lessonId]) {
             progress[lessonId] = { videos: [], articles: [], tasks: [] };
         }
-        // Обратная совместимость: если старый формат (строка) — преобразуем
         if (typeof progress[lessonId] === 'string') {
             const oldStatus = progress[lessonId];
             progress[lessonId] = {
@@ -163,13 +195,11 @@
                 tasks: []
             };
         }
-        // Убедимся, что массивы существуют
         ['videos', 'articles', 'tasks'].forEach(type => {
             if (!Array.isArray(progress[lessonId][type])) {
                 progress[lessonId][type] = [];
             }
         });
-        // Дополняем массивы до нужной длины
         if (lessonData) {
             const videoCount = (lessonData.videos || []).length;
             const articleCount = (lessonData.articles || []).length;
@@ -190,11 +220,8 @@
     function getLessonVideoStatus(lessonId) {
         const p = progress[lessonId];
         if (!p || !p.videos || p.videos.length === 0) return 'not_started';
-        // Если хотя бы одно видео "studying" — показываем studying
         if (p.videos.includes('studying')) return 'studying';
-        // Если все видео "done" — показываем done
         if (p.videos.every(s => s === 'done')) return 'done';
-        // Иначе — not_started
         return 'not_started';
     }
 
@@ -226,14 +253,16 @@
             if (!vkBridge || typeof vkBridge.send !== 'function') {
                 userBlock.style.display = 'flex';
                 userName.textContent = 'Гость (без VK)';
-                userAvatar.src = 'data:image/svg+xml,...';
+                userAvatar.src =
+                    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"%3E%3Ccircle cx="20" cy="20" r="20" fill="%23e1e4e8"/%3E%3Ctext x="20" y="26" font-size="16" text-anchor="middle" fill="%238e8e93"%3E?%3C/text%3E%3C/svg%3E';
                 return;
             }
             const data = await vkBridge.send('VKWebAppGetUserInfo');
             if (data && data.first_name) {
                 userBlock.style.display = 'flex';
                 userName.textContent = data.first_name + (data.last_name ? ' ' + data.last_name : '');
-                userAvatar.src = data.photo_200 || '...';
+                userAvatar.src = data.photo_200 ||
+                    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"%3E%3Ccircle cx="20" cy="20" r="20" fill="%23e1e4e8"/%3E%3Ctext x="20" y="26" font-size="16" text-anchor="middle" fill="%238e8e93"%3E?%3C/text%3E%3C/svg%3E';
             } else {
                 userBlock.style.display = 'flex';
                 userName.textContent = 'Пользователь VK';
@@ -315,15 +344,12 @@
                 lessonData = lesson;
             }
 
-            // Инициализируем прогресс для этого урока (дополняем массивы)
             ensureLessonProgress(lesson.id, lessonData);
 
             currentLesson = lessonData;
             currentLessonIndex = index;
 
-            // Показываем первое видео (если есть)
             if (lessonData.videos && lessonData.videos.length > 0) {
-                // Устанавливаем статус первого видео как "studying"
                 await setVideoStatus(lesson.id, 0, 'studying');
                 showVideo(lessonData.videos[0]);
             } else {
@@ -367,12 +393,10 @@
         if (!currentLesson) return;
 
         const lessonId = currentLesson.id;
-        // Помечаем первое видео как "done" (пока обрабатываем только одно видео)
         if (currentLesson.videos && currentLesson.videos.length > 0) {
             await setVideoStatus(lessonId, 0, 'done');
         }
 
-        // Переходим к следующему уроку
         const nextIndex = currentLessonIndex + 1;
         if (nextIndex < currentCourse.lessons.length) {
             const nextLesson = currentCourse.lessons[nextIndex];
@@ -408,7 +432,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('debug') === 'true') {
             debugInfo.classList.add('show');
-            debugLog('Отладка включена');
+            debugLog('Отладка включена через параметр debug=true');
         }
 
         debugLog('Приложение загружено, версия 2.4.0');
@@ -432,9 +456,7 @@
 
             progress = await loadProgressFromStorage();
 
-            // Инициализируем прогресс для всех уроков (на основе данных из course.json)
             for (const lesson of courseData.lessons) {
-                // Пока нет детальных данных, создаём пустые массивы (будут дополнены при открытии урока)
                 ensureLessonProgress(lesson.id, null);
             }
 
