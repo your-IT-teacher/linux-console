@@ -5,31 +5,19 @@
     { "id": "vid1", "title": "Видео-урок", "videoId": 456239020, "hash": "96187a5fac4956bc" }
   ],
   "articles": [
-    {
-      "id": "art1",
-      "title": "Создание файлов и директорий (touch и mkdir)",
-      "file": "articles/art1.json"
-    },
-    {
-      "id": "art2",
-      "title": "Копирование (cp)",
-      "file": "articles/art2.json"
-    },
-    {
-      "id": "art3",
-      "title": "Переименование и перемещение (mv)",
-      "file": "articles/art3.json"
-    },
-    {
-      "id": "art4",
-      "title": "Удаление (rm и rmdir)",
-      "file": "articles/art4.json"
-    },
-    {
-      "id": "art5",
-      "title": "Просмотр содержимого файлов (cat, less, head, tail)",
-      "file": "articles/art5.json"
-    }
+    { "id": "art1", "title": "Создание файлов и директорий (touch и mkdir)", "file": "articles/art1.json" },
+    { "id": "art2", "title": "Копирование (cp)", "file": "articles/art2.json" },
+    { "id": "art3", "title": "Переименование и перемещение (mv)", "file": "articles/art3.json" },
+    { "id": "art4", "title": "Удаление (rm и rmdir)", "file": "articles/art4.json" },
+    { "id": "art5", "title": "Просмотр содержимого файлов (cat, less, head, tail)", "file": "articles/art5.json" }
   ],
-  "tasks": []
+  "tasks": [
+    { "id": "task1", "file": "tasks/2.1.json" },
+    { "id": "task2", "file": "tasks/2.2.json" },
+    { "id": "task3", "file": "tasks/2.3.json" },
+    { "id": "task4", "file": "tasks/2.4.json" },
+    { "id": "task5", "file": "tasks/2.5.json" },
+    { "id": "task6", "file": "tasks/2.6.json" },
+    { "id": "task7", "file": "tasks/2.7.json" }
+  ]
 }

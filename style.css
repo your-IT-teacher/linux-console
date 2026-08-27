@@ -552,6 +552,11 @@ h1 {
     display: none;
 }
 
+/* ---- Подсказки в тестах ---- */
+.option-feedback.show {
+    display: block;
+}
+
 .test-actions {
     display: flex;
     gap: 12px;

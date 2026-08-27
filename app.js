@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.8.4';
+    const APP_VERSION = '2.8.5';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
@@ -698,8 +698,7 @@
                     const feedbackDiv = document.querySelectorAll('.test-option')[currentTaskAttempt].querySelector('.option-feedback');
                     if (feedbackDiv) {
                         feedbackDiv.textContent = selectedOption.feedback || 'Неверно. Попробуйте ещё раз.';
-                        feedbackDiv.style.display = 'block';
-                        feedbackDiv.style.color = 'red';
+                        feedbackDiv.classList.add('show');
                     }
                 } else if (selectedOption && selectedOption.is_correct) {
                     const optionDiv = document.querySelectorAll('.test-option')[currentTaskAttempt];
@@ -713,7 +712,7 @@
             checkButton.disabled = false;
             checkButton.onclick = checkAnswer;
             document.querySelectorAll('.option-feedback').forEach(el => {
-                el.style.display = 'none';
+                el.classList.remove('show');
                 el.textContent = '';
             });
             document.querySelectorAll('.test-option').forEach(el => {
@@ -775,15 +774,14 @@
             debugLog('Неверный ответ, показываем подсказку и меняем кнопку', 'info');
             checkButton.textContent = 'Попробовать ещё раз';
             checkButton.disabled = false;
-            // Показываем подсказку
+            // Показываем подсказку через класс .show
             const optionDivs = document.querySelectorAll('.test-option');
             if (optionDivs.length > selectedIndex) {
                 const feedbackDiv = optionDivs[selectedIndex].querySelector('.option-feedback');
                 if (feedbackDiv) {
                     const feedbackText = selectedOption.feedback || 'Неверно. Попробуйте ещё раз.';
                     feedbackDiv.textContent = feedbackText;
-                    feedbackDiv.style.display = 'block';
-                    feedbackDiv.style.color = 'red';
+                    feedbackDiv.classList.add('show');
                     debugLog(`Подсказка отображена: ${feedbackText}`, 'info');
                 } else {
                     debugLog('Не найден .option-feedback для варианта', 'error');
@@ -804,7 +802,7 @@
             el.disabled = false;
         });
         document.querySelectorAll('.option-feedback').forEach(el => {
-            el.style.display = 'none';
+            el.classList.remove('show');
             el.textContent = '';
         });
         document.querySelectorAll('.test-option').forEach(el => {

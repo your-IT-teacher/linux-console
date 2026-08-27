@@ -31,5 +31,14 @@
       "file": "articles/art5.json"
     }
   ],
-  "tasks": []
+  "tasks": [
+    { "id": "task1", "file": "tasks/8.1.json" },
+    { "id": "task2", "file": "tasks/8.2.json" },
+    { "id": "task3", "file": "tasks/8.3.json" },
+    { "id": "task4", "file": "tasks/8.4.json" },
+    { "id": "task5", "file": "tasks/8.5.json" },
+    { "id": "task6", "file": "tasks/8.6.json" },
+    { "id": "task7", "file": "tasks/8.7.json" },
+    { "id": "task8", "file": "tasks/8.8.json" }
+  ]
 }
