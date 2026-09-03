@@ -624,6 +624,58 @@ h1 {
     background: #f57c00;
 }
 
+/* ---- Уведомление о подписке ---- */
+.subscription-notice {
+    background: #fff3e0;
+    border: 1px solid #ffb74d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 14px;
+    color: #e65100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.join-group-button-small {
+    background: #ff9800;
+    color: #fff;
+    border: none;
+    border-radius: 16px;
+    padding: 4px 14px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.join-group-button-small:hover {
+    background: #f57c00;
+}
+
+.subscription-required {
+    margin-top: 20px;
+    padding: 24px;
+    background: #fff3e0;
+    border-radius: 12px;
+    border: 2px dashed #ffb74d;
+    text-align: center;
+}
+
+.subscription-required p {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: #1c1c1e;
+}
+
+.subscription-required .subscription-hint {
+    font-size: 14px;
+    color: #5e5e66;
+    margin-top: 8px;
+}
+
 /* ---- Медиа-запросы для мобильных ---- */
 @media (max-width: 420px) {
     .app {
@@ -661,5 +713,9 @@ h1 {
         max-height: 300px;
         font-size: 14px;
         padding: 12px;
+    }
+    .subscription-notice {
+        flex-direction: column;
+        gap: 6px;
     }
 }

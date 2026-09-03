@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.8.6.t';
+    const APP_VERSION = '2.9.0';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
@@ -49,6 +49,13 @@
     const doneButton2 = document.getElementById('doneButton2');
     const backButton3 = document.getElementById('backButton3');
     const doneButton3 = document.getElementById('doneButton3');
+    const backButton4 = document.getElementById('backButton4');
+
+    // Кнопки для подписки
+    const joinFromNotice = document.getElementById('joinFromNotice');
+    const joinFromTest = document.getElementById('joinFromTest');
+    const subscriptionNotice = document.getElementById('subscriptionNotice');
+    const subscriptionRequired = document.getElementById('subscriptionRequired');
 
     const vkBridge = window.vkBridge;
 
@@ -73,7 +80,7 @@
     let currentTaskAttempt = null;
     let isAnswerChecked = false;
 
-    // ---- Логгер (оставляем только важное) ----
+    // ---- Логгер ----
     function debugLog(message, type = 'info') {
         const entry = document.createElement('div');
         entry.className = `debug-entry ${type}`;
@@ -132,7 +139,7 @@
         }
     }
 
-    // ---- Работа с хранилищем (без лишних логов) ----
+    // ---- Работа с хранилищем ----
     function getStorageKey() {
         return STORAGE_PREFIX + DEFAULT_COURSE;
     }
@@ -140,7 +147,6 @@
     async function saveProgressToStorage(progressData) {
         const key = getStorageKey();
         const value = JSON.stringify(progressData);
-        // Не логируем огромные данные, только факт сохранения
         debugLog(`Сохранение прогресса: ключ = ${key}`, 'info');
 
         if (vkBridge && typeof vkBridge.send === 'function') {
@@ -237,7 +243,7 @@
         alert('Прогресс курса сброшен. Вы можете начать обучение заново.');
     }
 
-    // ---- Проверка членства в группе (без лишних логов) ----
+    // ---- Проверка членства в группе ----
     async function checkGroupMembership() {
         if (!vkBridge || typeof vkBridge.send !== 'function') {
             joinGroupButton.disabled = true;
@@ -262,12 +268,19 @@
                 joinGroupButton.textContent = '✅ Вы в группе!';
                 joinGroupButton.disabled = true;
                 joinGroupStatus.textContent = 'Спасибо, что подписались! Вы будете получать уведомления о новых вебинарах.';
+                // Скрываем уведомления о подписке
+                subscriptionNotice.style.display = 'none';
+                subscriptionRequired.style.display = 'none';
                 debugLog('Пользователь состоит в группе', 'success');
             } else {
                 joinGroupButton.classList.remove('joined');
                 joinGroupButton.textContent = '📢 Вступить в группу';
                 joinGroupButton.disabled = false;
                 joinGroupStatus.textContent = 'Подпишитесь, чтобы не пропустить новые вебинары и получить доступ к закрытому контенту.';
+                // Показываем уведомление (если урок открыт)
+                if (currentLesson) {
+                    subscriptionNotice.style.display = 'flex';
+                }
                 debugLog('Пользователь не состоит в группе', 'info');
             }
         } catch (error) {
@@ -302,6 +315,13 @@
                 joinGroupButton.textContent = '✅ Вы в группе!';
                 joinGroupButton.disabled = true;
                 joinGroupStatus.textContent = 'Спасибо! Теперь вы будете в курсе новых вебинаров и получите доступ к закрытому контенту.';
+                // Скрываем уведомления
+                subscriptionNotice.style.display = 'none';
+                subscriptionRequired.style.display = 'none';
+                // Если был открыт тест – показываем его
+                if (currentLesson && testContainer.style.display === 'none' && subscriptionRequired.style.display === 'none') {
+                    startTest();
+                }
                 debugLog(`Пользователь вступил в группу ${GROUP_ID}`, 'success');
             } else {
                 joinGroupButton.disabled = false;
@@ -685,7 +705,7 @@
         testContainer.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // ---- Проверка ответа (с детальной отладкой) ----
+    // ---- Проверка ответа ----
     function checkAnswer() {
         if (isAnswerChecked) {
             debugLog('checkAnswer: уже проверено, выходим', 'warn');
@@ -708,7 +728,6 @@
 
         currentTaskAttempt = selectedIndex;
 
-        // Отключаем все радио-кнопки
         document.querySelectorAll('input[name="task"]').forEach(el => el.disabled = true);
 
         if (isCorrect) {
@@ -729,11 +748,9 @@
             }
             checkButton.onclick = null;
         } else {
-            // Неправильный ответ
             debugLog('Неверный ответ, показываем подсказку и меняем кнопку', 'info');
             checkButton.textContent = 'Попробовать ещё раз';
             checkButton.disabled = false;
-            // Показываем подсказку через класс .show
             const optionDivs = document.querySelectorAll('.test-option');
             if (optionDivs.length > selectedIndex) {
                 const feedbackDiv = optionDivs[selectedIndex].querySelector('.option-feedback');
@@ -742,15 +759,6 @@
                     feedbackDiv.textContent = feedbackText;
                     feedbackDiv.classList.add('show');
                     debugLog(`Подсказка отображена: ${feedbackText}`, 'info');
-                    // Проверим, что класс добавился
-                    if (feedbackDiv.classList.contains('show')) {
-                        debugLog('Класс show успешно добавлен к feedbackDiv', 'info');
-                    } else {
-                        debugLog('Не удалось добавить класс show к feedbackDiv', 'error');
-                    }
-                    // Проверим display
-                    const computedStyle = window.getComputedStyle(feedbackDiv);
-                    debugLog(`Computed display: ${computedStyle.display}`, 'info');
                 } else {
                     debugLog('Не найден .option-feedback для варианта', 'error');
                 }
@@ -759,14 +767,11 @@
             }
             nextTaskButton.disabled = true;
             checkButton.onclick = retryAnswer;
-            // Лог состояния кнопки
-            debugLog(`Текст кнопки после неверного ответа: "${checkButton.textContent}"`, 'info');
         }
     }
 
     function retryAnswer() {
         debugLog('Повторная попытка для задания ' + (currentTaskIndex + 1), 'info');
-        // Сброс: снимаем выделение, убираем подсказки, разблокируем радио
         document.querySelectorAll('input[name="task"]').forEach(el => {
             el.checked = false;
             el.disabled = false;
@@ -778,19 +783,15 @@
         document.querySelectorAll('.test-option').forEach(el => {
             el.style.backgroundColor = '';
         });
-        // Сброс состояния
         isAnswerChecked = false;
         currentTaskAttempt = null;
-        // Возвращаем кнопку в исходное состояние
         checkButton.textContent = 'Проверить';
         checkButton.disabled = false;
         checkButton.onclick = checkAnswer;
         nextTaskButton.disabled = true;
-        // Сохраняем статус failed
         const lessonId = currentLesson.id;
         setTaskStatus(lessonId, currentTaskIndex, 'failed');
         debugLog(`Задание ${currentTaskIndex+1} помечено как failed (повторная попытка)`, 'info');
-        // Перерисовываем вопрос, чтобы сбросить визуальное состояние
         showTask(currentTaskIndex);
         debugLog('retryAnswer: showTask вызван, кнопка восстановлена', 'info');
     }
@@ -810,8 +811,17 @@
         }
     }
 
-    // ---- Показать/скрыть тест ----
+    // ---- Показать/скрыть тест (с проверкой подписки) ----
     function startTest() {
+        if (!isGroupMember) {
+            // Показываем блок требования подписки
+            videoContainer.style.display = 'none';
+            articlesContainer.style.display = 'none';
+            testContainer.style.display = 'none';
+            subscriptionRequired.style.display = 'block';
+            return;
+        }
+
         if (!currentLesson || !tasksMeta || tasksMeta.length === 0) {
             alert('В этом уроке пока нет заданий.');
             return;
@@ -819,6 +829,7 @@
         videoContainer.style.display = 'none';
         articlesContainer.style.display = 'none';
         testContainer.style.display = 'block';
+        subscriptionRequired.style.display = 'none';
         const lessonId = currentLesson.id;
         let firstNotPassed = 0;
         for (let i = 0; i < tasksMeta.length; i++) {
@@ -838,6 +849,7 @@
 
     function hideTest() {
         testContainer.style.display = 'none';
+        subscriptionRequired.style.display = 'none';
         if (currentLesson && currentLesson.videos && currentLesson.videos.length > 0) {
             videoContainer.style.display = 'block';
         }
@@ -989,6 +1001,13 @@
             }
 
             testContainer.style.display = 'none';
+            subscriptionRequired.style.display = 'none';
+            // Показываем уведомление о подписке, если нужно
+            if (!isGroupMember) {
+                subscriptionNotice.style.display = 'flex';
+            } else {
+                subscriptionNotice.style.display = 'none';
+            }
             startTestButton.style.display = 'inline-block';
 
             updateDoneButtonVisibility();
@@ -1082,11 +1101,13 @@
         articlesContainer.style.display = 'none';
         articleContent.innerHTML = '';
         testContainer.style.display = 'none';
+        subscriptionRequired.style.display = 'none';
         currentLesson = null;
         doneButton.style.display = 'none';
         if (doneButton2) doneButton2.style.display = 'none';
         if (doneButton3) doneButton3.style.display = 'none';
         startTestButton.style.display = 'none';
+        subscriptionNotice.style.display = 'none';
 
         userBlock.style.display = '';
         joinGroupBlock.style.display = '';
@@ -1147,10 +1168,15 @@
         if (doneButton2) doneButton2.addEventListener('click', markAsDone);
         if (backButton3) backButton3.addEventListener('click', goBack);
         if (doneButton3) doneButton3.addEventListener('click', markAsDone);
+        if (backButton4) backButton4.addEventListener('click', goBack);
 
         startTestButton.addEventListener('click', startTest);
         checkButton.addEventListener('click', checkAnswer);
         nextTaskButton.addEventListener('click', nextTask);
+
+        // Кнопки для подписки
+        if (joinFromNotice) joinFromNotice.addEventListener('click', handleJoinGroup);
+        if (joinFromTest) joinFromTest.addEventListener('click', handleJoinGroup);
     }
 
     function renderCourse(course) {

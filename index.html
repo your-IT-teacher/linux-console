@@ -39,21 +39,30 @@
 <body>
     <div class="app" id="app">
 
+        <!-- Блок пользователя -->
         <div id="userBlock" class="user-card" style="display: none;">
             <img id="userAvatar" src="" alt="аватар" />
             <span class="user-name" id="userName">Гость</span>
         </div>
 
+        <!-- Вступление в группу -->
         <div id="joinGroupBlock">
             <button class="join-group-button" id="joinGroupButton">📢 Вступить в группу</button>
             <p id="joinGroupStatus" class="join-status"></p>
         </div>
 
+        <!-- Заголовок курса -->
         <div id="courseHeader">
             <h1 id="courseTitle"></h1>
             <p class="description" id="courseDescription"></p>
+            <!-- Уведомление о подписке для тестов -->
+            <div id="subscriptionNotice" class="subscription-notice" style="display: none;">
+                ⚠️ Видео и тестирование доступны только подписчикам нашей группы. 
+                <button class="join-group-button-small" id="joinFromNotice">Вступить</button>
+            </div>
         </div>
 
+        <!-- Список уроков -->
         <div id="stepsContainer" class="steps-list"></div>
 
         <!-- Контейнер для видео, статей и тестов -->
@@ -93,6 +102,16 @@
                 <div class="video-actions">
                     <button class="back-button" id="backButton3">← Назад к урокам</button>
                     <button class="done-button" id="doneButton3">✅ Сделано! Перейти к следующему</button>
+                </div>
+            </div>
+
+            <!-- Блок, если подписка не оформлена -->
+            <div id="subscriptionRequired" style="display: none;" class="subscription-required">
+                <p>🔒 Для доступа к тестированию необходимо подписаться на наше сообщество.</p>
+                <button class="join-group-button" id="joinFromTest">📢 Вступить в группу</button>
+                <p class="subscription-hint">Это бесплатно и займёт всего секунду.</p>
+                <div class="video-actions">
+                    <button class="back-button" id="backButton4">← Назад к урокам</button>
                 </div>
             </div>
         </div>
