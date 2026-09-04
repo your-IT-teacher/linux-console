@@ -1,24 +1,31 @@
-// vite.config.js
 import { defineConfig } from 'vite';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import pkg from './package.json' assert { type: 'json' };
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 export default defineConfig({
-    root: '.',
+    // Корень проекта – папка src (где лежит index.html)
+    root: 'src',
+    
     define: {
+        // Подставляем версию из package.json
         'APP_VERSION': JSON.stringify(pkg.version)
     },
+    
     build: {
-        outDir: 'dist',
+        // Сборка в папку dist на уровень выше
+        outDir: '../dist',
         emptyOutDir: true,
         rollupOptions: {
             input: {
-                main: resolve(__dirname, 'index.html')
+                main: resolve(__dirname, 'src/index.html')
             }
         }
     },
-    // Если data лежит в public, то publicDir по умолчанию 'public'
-    // Если data в корне, можно настроить алиас или использовать плагин copy
-    // Для простоты предполагаем, что data лежит в public/data
+    
+    // Папка public (данные) копируется в корень dist
     publicDir: 'public'
 });
