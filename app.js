@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.9.1';
+    const APP_VERSION = '2.9.1-step';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
