@@ -54,10 +54,8 @@
         <!-- Заголовок курса -->
         <div id="courseHeader">
             <h1 id="courseTitle"></h1>
-            <!-- Название текущего урока (показывается при открытом уроке) -->
             <h2 id="lessonTitle" style="display: none; font-size: 18px; color: #4a76a8; margin-top: 4px;"></h2>
             <p class="description" id="courseDescription"></p>
-            <!-- Уведомление о подписке для тестов -->
             <div id="subscriptionNotice" class="subscription-notice" style="display: none;">
                 ⚠️ Видео и тестирование доступны только подписчикам нашей группы.
                 <button class="join-group-button-small" id="joinFromNotice">Вступить</button>
@@ -69,24 +67,23 @@
 
         <!-- Контейнер для видео, статей и тестов -->
         <div id="lessonContainer" style="display: none;">
-            <!-- Видео -->
+            <!-- Видео (только плеер, без кнопок) -->
             <div id="videoContainer">
                 <div id="videoWrapper"></div>
-                <div class="video-actions">
-                    <button class="back-button" id="backButton">← Назад к урокам</button>
-                    <button class="done-button" id="doneButton">✅ Сделано! Перейти к следующему</button>
-                    <button class="test-button" id="startTestButton">📝 Пройти тестирование</button>
-                </div>
             </div>
 
-            <!-- Блок статей -->
+            <!-- Блок статей и общих кнопок управления -->
             <div id="articlesContainer">
                 <div id="articleContent" class="article-content"></div>
-                <button class="next-article-button" id="nextArticleButton">➡️ Следующая статья</button>
-                <div class="video-actions">
-                    <button class="back-button" id="backButton2">← Назад к урокам</button>
-                    <button class="done-button" id="doneButton2">✅ Сделано! Перейти к следующему</button>
+
+                <!-- Общий блок управления (кнопки в нужном порядке) -->
+                <div class="lesson-actions">
+                    <button class="next-article-button" id="nextArticleButton">➡️ Следующая статья</button>
+                    <button class="test-button" id="startTestButton">📝 Пройти тестирование</button>
+                    <button class="done-button" id="doneButton">✅ Сделано! Перейти к следующему</button>
+                    <button class="back-button" id="backButton">← Назад к урокам</button>
                 </div>
+
                 <h3 class="articles-header">📚 Статьи урока</h3>
                 <div id="articlesList" class="articles-list"></div>
             </div>
@@ -101,7 +98,7 @@
                     <button class="check-button" id="checkButton">Проверить</button>
                     <button class="next-button" id="nextTaskButton" disabled>Следующее задание →</button>
                 </div>
-                <div class="video-actions">
+                <div class="lesson-actions">
                     <button class="back-button" id="backButton3">← Назад к урокам</button>
                     <button class="done-button" id="doneButton3">✅ Сделано! Перейти к следующему</button>
                 </div>
@@ -112,7 +109,7 @@
                 <p>🔒 Для доступа к тестированию необходимо подписаться на наше сообщество.</p>
                 <button class="join-group-button" id="joinFromTest">📢 Вступить в группу</button>
                 <p class="subscription-hint">Это бесплатно и займёт всего секунду.</p>
-                <div class="video-actions">
+                <div class="lesson-actions">
                     <button class="back-button" id="backButton4">← Назад к урокам</button>
                 </div>
             </div>

@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.10.0-step';
+    const APP_VERSION = '2.11.0';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
@@ -45,9 +45,7 @@
     const nextTaskButton = document.getElementById('nextTaskButton');
     const startTestButton = document.getElementById('startTestButton');
 
-    // Дубли кнопок
-    const backButton2 = document.getElementById('backButton2');
-    const doneButton2 = document.getElementById('doneButton2');
+    // Дубли кнопок (для тестов)
     const backButton3 = document.getElementById('backButton3');
     const doneButton3 = document.getElementById('doneButton3');
     const backButton4 = document.getElementById('backButton4');
@@ -264,13 +262,11 @@
 
             isGroupMember = isMember;
 
-            // Обновляем UI в зависимости от подписки
             if (isGroupMember) {
                 joinGroupButton.classList.add('joined');
                 joinGroupButton.textContent = '✅ Вы в группе!';
                 joinGroupButton.disabled = true;
                 joinGroupStatus.textContent = 'Спасибо, что подписались! Вы будете получать уведомления о новых вебинарах.';
-                // Скрываем уведомление и блок требования подписки
                 if (subscriptionNotice) subscriptionNotice.style.display = 'none';
                 if (subscriptionRequired) subscriptionRequired.style.display = 'none';
                 debugLog('Пользователь состоит в группе', 'success');
@@ -279,7 +275,6 @@
                 joinGroupButton.textContent = '📢 Вступить в группу';
                 joinGroupButton.disabled = false;
                 joinGroupStatus.textContent = 'Подпишитесь, чтобы не пропустить новые вебинары и получить доступ к закрытому контенту.';
-                // Показываем уведомление
                 if (subscriptionNotice) subscriptionNotice.style.display = 'flex';
                 debugLog('Пользователь не состоит в группе', 'info');
             }
@@ -315,10 +310,8 @@
                 joinGroupButton.textContent = '✅ Вы в группе!';
                 joinGroupButton.disabled = true;
                 joinGroupStatus.textContent = 'Спасибо! Теперь вы будете в курсе новых вебинаров и получите доступ к закрытому контенту.';
-                // Скрываем уведомление и блок требования подписки
                 if (subscriptionNotice) subscriptionNotice.style.display = 'none';
                 if (subscriptionRequired) subscriptionRequired.style.display = 'none';
-                // Обновляем кнопку "Пройти тестирование", если она видна
                 updateTestButtonVisibility();
                 debugLog(`Пользователь вступил в группу ${GROUP_ID}`, 'success');
             } else {
@@ -581,7 +574,6 @@
             startTestButton.style.display = 'none';
             return;
         }
-        // Кнопка тестирования показывается только если пользователь подписан
         updateTestButtonVisibility();
         tasksMeta = lessonData.tasks;
         tasksData = new Array(tasksMeta.length).fill(null);
@@ -735,7 +727,6 @@
 
         currentTaskAttempt = selectedIndex;
 
-        // Отключаем все радио-кнопки
         document.querySelectorAll('input[name="task"]').forEach(el => el.disabled = true);
 
         if (isCorrect) {
@@ -756,7 +747,6 @@
             }
             checkButton.onclick = null;
         } else {
-            // Неправильный ответ – показываем подсказку
             debugLog('Неверный ответ, показываем подсказку и меняем кнопку', 'info');
             checkButton.textContent = 'Попробовать ещё раз';
             checkButton.disabled = false;
@@ -785,33 +775,26 @@
     function retryAnswer() {
         debugLog('Повторная попытка для задания ' + (currentTaskIndex + 1), 'info');
         
-        // Сбрасываем только радиокнопки, НЕ трогаем подсказки
         document.querySelectorAll('input[name="task"]').forEach(el => {
             el.checked = false;
             el.disabled = false;
         });
         
-        // Сбрасываем выделение вариантов
         document.querySelectorAll('.test-option').forEach(el => {
             el.style.backgroundColor = '';
         });
         
-        // Сбрасываем состояние
         isAnswerChecked = false;
         currentTaskAttempt = null;
         
-        // Возвращаем кнопку в исходное состояние
         checkButton.textContent = 'Проверить';
         checkButton.disabled = false;
         checkButton.onclick = checkAnswer;
         nextTaskButton.disabled = true;
         
-        // Сохраняем статус failed
         const lessonId = currentLesson.id;
         setTaskStatus(lessonId, currentTaskIndex, 'failed');
         debugLog(`Задание ${currentTaskIndex+1} помечено как failed (повторная попытка)`, 'info');
-        
-        // НЕ вызываем showTask – вопрос остаётся на месте, подсказка не исчезает
         debugLog('retryAnswer: состояние сброшено, подсказка сохранена', 'info');
     }
 
@@ -833,7 +816,6 @@
     // ---- Показать/скрыть тест ----
     function startTest() {
         if (!isGroupMember) {
-            // Показываем блок требования подписки
             videoContainer.style.display = 'none';
             articlesContainer.style.display = 'none';
             testContainer.style.display = 'none';
@@ -991,7 +973,6 @@
             currentLesson = lessonData;
             currentLessonIndex = index;
 
-            // Показываем название урока
             if (lessonData && lessonData.title) {
                 lessonTitle.textContent = lessonData.title;
                 lessonTitle.style.display = 'block';
@@ -1102,11 +1083,9 @@
     function updateDoneButtonVisibility() {
         if (currentLesson && lessonContainer.style.display === 'block') {
             doneButton.style.display = 'inline-block';
-            if (doneButton2) doneButton2.style.display = 'inline-block';
             if (doneButton3) doneButton3.style.display = 'inline-block';
         } else {
             doneButton.style.display = 'none';
-            if (doneButton2) doneButton2.style.display = 'none';
             if (doneButton3) doneButton3.style.display = 'none';
         }
     }
@@ -1123,7 +1102,6 @@
         if (subscriptionRequired) subscriptionRequired.style.display = 'none';
         currentLesson = null;
         doneButton.style.display = 'none';
-        if (doneButton2) doneButton2.style.display = 'none';
         if (doneButton3) doneButton3.style.display = 'none';
         startTestButton.style.display = 'none';
         lessonTitle.style.display = 'none';
@@ -1133,7 +1111,6 @@
         courseDescription.style.display = '';
         if (footerNote) footerNote.style.display = '';
 
-        // Восстанавливаем заголовок курса
         if (currentCourse) {
             courseTitle.textContent = currentCourse.title;
         }
@@ -1188,8 +1165,6 @@
         joinGroupButton.addEventListener('click', handleJoinGroup);
         nextArticleButton.addEventListener('click', nextArticle);
 
-        if (backButton2) backButton2.addEventListener('click', goBack);
-        if (doneButton2) doneButton2.addEventListener('click', markAsDone);
         if (backButton3) backButton3.addEventListener('click', goBack);
         if (doneButton3) doneButton3.addEventListener('click', markAsDone);
         if (backButton4) backButton4.addEventListener('click', goBack);
