@@ -2,7 +2,7 @@
     'use strict';
 
     // ---- Версия приложения ----
-    const APP_VERSION = '2.9.1-step';
+    const APP_VERSION = '2.9.1';
 
     // ---- Конфигурация ----
     const DEFAULT_COURSE = 'linux-console';
@@ -14,6 +14,7 @@
     const userAvatar = document.getElementById('userAvatar');
     const userName = document.getElementById('userName');
     const courseTitle = document.getElementById('courseTitle');
+    const lessonTitle = document.getElementById('lessonTitle');
     const courseDescription = document.getElementById('courseDescription');
     const stepsContainer = document.getElementById('stepsContainer');
     const lessonContainer = document.getElementById('lessonContainer');
@@ -990,6 +991,14 @@
             currentLesson = lessonData;
             currentLessonIndex = index;
 
+            // Показываем название урока
+            if (lessonData && lessonData.title) {
+                lessonTitle.textContent = lessonData.title;
+                lessonTitle.style.display = 'block';
+            } else {
+                lessonTitle.style.display = 'none';
+            }
+
             articleCache = {};
 
             userBlock.style.display = 'none';
@@ -1117,11 +1126,17 @@
         if (doneButton2) doneButton2.style.display = 'none';
         if (doneButton3) doneButton3.style.display = 'none';
         startTestButton.style.display = 'none';
+        lessonTitle.style.display = 'none';
 
         userBlock.style.display = '';
         joinGroupBlock.style.display = '';
         courseDescription.style.display = '';
         if (footerNote) footerNote.style.display = '';
+
+        // Восстанавливаем заголовок курса
+        if (currentCourse) {
+            courseTitle.textContent = currentCourse.title;
+        }
 
         debugLog('Возврат к списку', 'info');
     }
@@ -1189,6 +1204,7 @@
 
     function renderCourse(course) {
         courseTitle.textContent = course.title;
+        lessonTitle.style.display = 'none';
         courseDescription.textContent = course.description;
         renderSteps();
     }
